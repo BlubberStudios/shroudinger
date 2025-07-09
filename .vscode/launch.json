@@ -1,0 +1,22 @@
+{
+    "configurations": [
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:encryptedDNS mac app}",
+            "name": "Debug EncryptedDNS",
+            "program": "${workspaceFolder:encryptedDNS mac app}/.build/debug/EncryptedDNS",
+            "preLaunchTask": "swift: Build Debug EncryptedDNS"
+        },
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:encryptedDNS mac app}",
+            "name": "Release EncryptedDNS",
+            "program": "${workspaceFolder:encryptedDNS mac app}/.build/release/EncryptedDNS",
+            "preLaunchTask": "swift: Build Release EncryptedDNS"
+        }
+    ]
+}

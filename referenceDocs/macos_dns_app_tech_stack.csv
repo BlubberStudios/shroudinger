@@ -1,0 +1,42 @@
+Category,Technology/Framework,Purpose,Key Features
+Development Environment,Xcode 15+,Primary IDE for macOS development,Integrated development environment
+Development Environment,Swift Package Manager,Dependency management,Automatic dependency resolution
+Development Environment,Xcode Command Line Tools,Build tools and compiler,"Compiler, linker, debugging tools"
+Development Environment,Instruments,Performance profiling and debugging,"Memory profiling, performance analysis"
+Programming Language,Swift 5.9+,Main programming language,"Type safety, memory safety"
+Programming Language,Async/Await,Asynchronous programming,Structured concurrency
+Programming Language,Combine Framework,Reactive programming patterns,Declarative event handling
+User Interface,SwiftUI,Modern UI framework,Declarative UI programming
+User Interface,AppKit,Native macOS UI components,Native macOS controls
+User Interface,MenuBarExtra,Menu bar application integration,System integration
+User Interface,NSStatusItem,System status bar management,Menu bar presence
+Networking,NetworkExtension,Network extension capabilities,System-wide DNS interception
+Networking,NEDNSProxyProvider,DNS proxy implementation,DNS query processing
+Networking,NWConnection,Encrypted network connections,Secure network communication
+Networking,Network.framework,Low-level networking APIs,High-performance networking
+Networking,CFNetwork,Core networking framework,C-based networking APIs
+DNS Encryption,TLS 1.3,DNS over TLS encryption,"Port 853, certificate validation"
+DNS Encryption,HTTP/2,DNS over HTTPS encryption,"Port 443, HTTP/2 transport"
+DNS Encryption,QUIC Protocol,DNS over QUIC encryption,"Port 853, reduced latency"
+DNS Encryption,DNSCrypt,Alternative DNS encryption,High-performance encryption
+Blocklist Management,Adblock Plus Parser,Parse Adblock format filters,Complex rule parsing
+Blocklist Management,Hosts File Parser,Parse hosts file format,Simple domain blocking
+Blocklist Management,Regular Expression Engine,Pattern matching for rules,Fast pattern matching
+Blocklist Management,Apple Swift Async DNS Resolver,Asynchronous DNS queries,Swift-friendly DNS API
+Data Storage,Core Data,App configuration storage,Object-relational mapping
+Data Storage,SQLite,Blocklist caching database,Embedded SQL database
+Data Storage,File System APIs,File operations and storage,Cross-platform file operations
+System Integration,System Extensions,System-level extensions,Kernel-level extensions
+System Integration,launchd,Background service management,Process lifecycle management
+System Integration,OSSystemExtensionManager,System extension lifecycle,Extension installation/removal
+System Integration,Sandboxing,Security isolation,App Store compatibility
+Performance & Algorithms,Trie Data Structure,Fast domain lookup,O(log n) lookup time
+Performance & Algorithms,Hash Tables,Efficient data structures,O(1) average lookup time
+Performance & Algorithms,Binary Search,Fast search algorithms,O(log n) sorted data search
+Performance & Algorithms,LRU Cache,Memory-efficient caching,O(1) cache access
+Testing & Debugging,XCTest,Unit testing framework,Automated testing
+Testing & Debugging,XCUITest,UI testing automation,User interface testing
+Testing & Debugging,Unit Testing,Test-driven development,Code quality assurance
+Deployment & Distribution,App Store Distribution,Official app distribution,Secure distribution
+Deployment & Distribution,Developer ID Signing,Developer app signing,Code signing validation
+Deployment & Distribution,Notarization,Security validation,Malware scanning
