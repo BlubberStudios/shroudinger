@@ -1,0 +1,4 @@
+Target dependency graph (2 targets)
+Target 'Shroudinger' in project 'Shroudinger'
+➜ Explicit dependency on target 'ShroudingerExtension' in project 'Shroudinger'
+Target 'ShroudingerExtension' in project 'Shroudinger' (no dependencies)

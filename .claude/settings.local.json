@@ -6,7 +6,8 @@
       "Bash(mkdir:*)",
       "Bash(mv:*)",
       "Bash(true)",
-      "Bash(swift package:*)"
+      "Bash(swift package:*)",
+      "Bash(cp:*)"
     ],
     "deny": []
   }

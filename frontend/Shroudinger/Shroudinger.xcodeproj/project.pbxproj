@@ -6,6 +6,11 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		E0F3C7152E21D04C00148A72 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = E0F3C7142E21D04C00148A72 /* Assets.xcassets */; };
+		E0F3C7282E21D2F600148A72 /* ShroudingerExtension.appex in Embed ExtensionKit Extensions */ = {isa = PBXBuildFile; fileRef = E0F3C71E2E21D2F600148A72 /* ShroudingerExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+/* End PBXBuildFile section */
+
 /* Begin PBXContainerItemProxy section */
 		E0F3C6F02E21CD3100148A72 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -21,13 +26,47 @@
 			remoteGlobalIDString = E0F3C6E02E21CD3000148A72;
 			remoteInfo = Shroudinger;
 		};
+		E0F3C7262E21D2F600148A72 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = E0F3C6D92E21CD3000148A72 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = E0F3C71D2E21D2F600148A72;
+			remoteInfo = ShroudingerExtension;
+		};
 /* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		E0F3C72D2E21D2F600148A72 /* Embed ExtensionKit Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "$(EXTENSIONS_FOLDER_PATH)";
+			dstSubfolderSpec = 16;
+			files = (
+				E0F3C7282E21D2F600148A72 /* ShroudingerExtension.appex in Embed ExtensionKit Extensions */,
+			);
+			name = "Embed ExtensionKit Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
 		E0F3C6E12E21CD3000148A72 /* Shroudinger.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Shroudinger.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		E0F3C6EF2E21CD3100148A72 /* ShroudingerTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = ShroudingerTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		E0F3C6F92E21CD3100148A72 /* ShroudingerUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = ShroudingerUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		E0F3C7142E21D04C00148A72 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		E0F3C7192E21D24E00148A72 /* Shroudinger.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Shroudinger.entitlements; sourceTree = "<group>"; };
+		E0F3C71E2E21D2F600148A72 /* ShroudingerExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.extensionkit-extension"; includeInIndex = 0; path = ShroudingerExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
+
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		E0F3C7292E21D2F600148A72 /* Exceptions for "ShroudingerExtension" folder in "ShroudingerExtension" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = E0F3C71D2E21D2F600148A72 /* ShroudingerExtension */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		E0F3C6E32E21CD3000148A72 /* Shroudinger */ = {
@@ -43,6 +82,14 @@
 		E0F3C6FC2E21CD3100148A72 /* ShroudingerUITests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			path = ShroudingerUITests;
+			sourceTree = "<group>";
+		};
+		E0F3C71F2E21D2F600148A72 /* ShroudingerExtension */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				E0F3C7292E21D2F600148A72 /* Exceptions for "ShroudingerExtension" folder in "ShroudingerExtension" target */,
+			);
+			path = ShroudingerExtension;
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
@@ -69,15 +116,25 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		E0F3C71B2E21D2F600148A72 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
 		E0F3C6D82E21CD3000148A72 = {
 			isa = PBXGroup;
 			children = (
+				E0F3C7192E21D24E00148A72 /* Shroudinger.entitlements */,
+				E0F3C7142E21D04C00148A72 /* Assets.xcassets */,
 				E0F3C6E32E21CD3000148A72 /* Shroudinger */,
 				E0F3C6F22E21CD3100148A72 /* ShroudingerTests */,
 				E0F3C6FC2E21CD3100148A72 /* ShroudingerUITests */,
+				E0F3C71F2E21D2F600148A72 /* ShroudingerExtension */,
 				E0F3C6E22E21CD3000148A72 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -88,6 +145,7 @@
 				E0F3C6E12E21CD3000148A72 /* Shroudinger.app */,
 				E0F3C6EF2E21CD3100148A72 /* ShroudingerTests.xctest */,
 				E0F3C6F92E21CD3100148A72 /* ShroudingerUITests.xctest */,
+				E0F3C71E2E21D2F600148A72 /* ShroudingerExtension.appex */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -102,10 +160,12 @@
 				E0F3C6DD2E21CD3000148A72 /* Sources */,
 				E0F3C6DE2E21CD3000148A72 /* Frameworks */,
 				E0F3C6DF2E21CD3000148A72 /* Resources */,
+				E0F3C72D2E21D2F600148A72 /* Embed ExtensionKit Extensions */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				E0F3C7272E21D2F600148A72 /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				E0F3C6E32E21CD3000148A72 /* Shroudinger */,
@@ -163,6 +223,28 @@
 			productReference = E0F3C6F92E21CD3100148A72 /* ShroudingerUITests.xctest */;
 			productType = "com.apple.product-type.bundle.ui-testing";
 		};
+		E0F3C71D2E21D2F600148A72 /* ShroudingerExtension */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = E0F3C72A2E21D2F600148A72 /* Build configuration list for PBXNativeTarget "ShroudingerExtension" */;
+			buildPhases = (
+				E0F3C71A2E21D2F600148A72 /* Sources */,
+				E0F3C71B2E21D2F600148A72 /* Frameworks */,
+				E0F3C71C2E21D2F600148A72 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				E0F3C71F2E21D2F600148A72 /* ShroudingerExtension */,
+			);
+			name = ShroudingerExtension;
+			packageProductDependencies = (
+			);
+			productName = ShroudingerExtension;
+			productReference = E0F3C71E2E21D2F600148A72 /* ShroudingerExtension.appex */;
+			productType = "com.apple.product-type.extensionkit-extension";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -184,6 +266,9 @@
 						CreatedOnToolsVersion = 16.4;
 						TestTargetID = E0F3C6E02E21CD3000148A72;
 					};
+					E0F3C71D2E21D2F600148A72 = {
+						CreatedOnToolsVersion = 16.4;
+					};
 				};
 			};
 			buildConfigurationList = E0F3C6DC2E21CD3000148A72 /* Build configuration list for PBXProject "Shroudinger" */;
@@ -203,6 +288,7 @@
 				E0F3C6E02E21CD3000148A72 /* Shroudinger */,
 				E0F3C6EE2E21CD3100148A72 /* ShroudingerTests */,
 				E0F3C6F82E21CD3100148A72 /* ShroudingerUITests */,
+				E0F3C71D2E21D2F600148A72 /* ShroudingerExtension */,
 			);
 		};
 /* End PBXProject section */
@@ -212,6 +298,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				E0F3C7152E21D04C00148A72 /* Assets.xcassets in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -223,6 +310,13 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 		E0F3C6F72E21CD3100148A72 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		E0F3C71C2E21D2F600148A72 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -253,6 +347,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		E0F3C71A2E21D2F600148A72 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
@@ -265,6 +366,11 @@
 			isa = PBXTargetDependency;
 			target = E0F3C6E02E21CD3000148A72 /* Shroudinger */;
 			targetProxy = E0F3C6FA2E21CD3100148A72 /* PBXContainerItemProxy */;
+		};
+		E0F3C7272E21D2F600148A72 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = E0F3C71D2E21D2F600148A72 /* ShroudingerExtension */;
+			targetProxy = E0F3C7262E21D2F600148A72 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
@@ -395,6 +501,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = Shroudinger/Shroudinger.entitlements;
+				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;
@@ -402,11 +509,13 @@
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
+				MACOSX_DEPLOYMENT_TARGET = 13.0;
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = blubberstudios.Shroudinger;
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -422,6 +531,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = Shroudinger/Shroudinger.entitlements;
+				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;
@@ -429,11 +539,13 @@
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
+				MACOSX_DEPLOYMENT_TARGET = 13.0;
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = blubberstudios.Shroudinger;
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -511,6 +623,60 @@
 			};
 			name = Release;
 		};
+		E0F3C72B2E21D2F600148A72 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = ShroudingerExtension/ShroudingerExtension.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = AGNFU8AHY4;
+				ENABLE_HARDENED_RUNTIME = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = ShroudingerExtension/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = ShroudingerExtension;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@executable_path/../../../../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 13.0;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = blubberstudios.Shroudinger.ShroudingerExtension;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
+		E0F3C72C2E21D2F600148A72 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = ShroudingerExtension/ShroudingerExtension.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = AGNFU8AHY4;
+				ENABLE_HARDENED_RUNTIME = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = ShroudingerExtension/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = ShroudingerExtension;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@executable_path/../../../../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 13.0;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = blubberstudios.Shroudinger.ShroudingerExtension;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -546,6 +712,15 @@
 			buildConfigurations = (
 				E0F3C70A2E21CD3100148A72 /* Debug */,
 				E0F3C70B2E21CD3100148A72 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		E0F3C72A2E21D2F600148A72 /* Build configuration list for PBXNativeTarget "ShroudingerExtension" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				E0F3C72B2E21D2F600148A72 /* Debug */,
+				E0F3C72C2E21D2F600148A72 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
