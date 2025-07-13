@@ -236,7 +236,91 @@ struct CompactDNSServerView: View {
             
             // Custom Configuration or Current Configuration Display
             if settingsManager.selectedDNSProvider == .custom {
-                CustomConfigInputView(settingsManager: settingsManager)
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack {
+                        Text("Custom Configuration")
+                            .font(.subheadline)
+                            .fontWeight(.medium)
+                        Spacer()
+                    }
+                    
+                    let currentConfig = settingsManager.customDNSConfig.getConfig(for: settingsManager.selectedProtocol)
+                    
+                    Group {
+                        switch settingsManager.selectedProtocol {
+                        case .doH:
+                            VStack(alignment: .leading, spacing: 6) {
+                                Text("Server URL")
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                                TextField("https://dns.example.com/dns-query", text: Binding(
+                                    get: { currentConfig.url },
+                                    set: { newValue in
+                                        var newConfig = currentConfig
+                                        newConfig.url = newValue
+                                        settingsManager.updateCustomDNSConfig(for: .doH, config: newConfig)
+                                    }
+                                ))
+                                .textFieldStyle(.roundedBorder)
+                                .font(.caption)
+                                
+                                Text("Host (optional)")
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                                TextField("dns.example.com", text: Binding(
+                                    get: { currentConfig.host },
+                                    set: { newValue in
+                                        var newConfig = currentConfig
+                                        newConfig.host = newValue
+                                        settingsManager.updateCustomDNSConfig(for: .doH, config: newConfig)
+                                    }
+                                ))
+                                .textFieldStyle(.roundedBorder)
+                                .font(.caption)
+                            }
+                            
+                        case .doT, .doQ:
+                            VStack(alignment: .leading, spacing: 6) {
+                                Text("Host")
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                                TextField("dns.example.com", text: Binding(
+                                    get: { currentConfig.host },
+                                    set: { newValue in
+                                        var newConfig = currentConfig
+                                        newConfig.host = newValue
+                                        settingsManager.updateCustomDNSConfig(for: settingsManager.selectedProtocol, config: newConfig)
+                                    }
+                                ))
+                                .textFieldStyle(.roundedBorder)
+                                .font(.caption)
+                                
+                                Text("Port")
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                                TextField("853", text: Binding(
+                                    get: { String(currentConfig.port) },
+                                    set: { newValue in
+                                        var newConfig = currentConfig
+                                        newConfig.port = Int(newValue) ?? 853
+                                        settingsManager.updateCustomDNSConfig(for: settingsManager.selectedProtocol, config: newConfig)
+                                    }
+                                ))
+                                .textFieldStyle(.roundedBorder)
+                                .font(.caption)
+                            }
+                        }
+                    }
+                    .padding(8)
+                    .background(Color(.controlBackgroundColor).opacity(0.3))
+                    .cornerRadius(6)
+                    
+                    // Protocol description
+                    Text(settingsManager.selectedProtocol.description)
+                        .font(.caption2)
+                        .foregroundColor(.secondary)
+                        .padding(.top, 4)
+                }
             } else {
                 VStack(alignment: .leading, spacing: 6) {
                     HStack {
@@ -358,94 +442,3 @@ struct ContentView_Previews: PreviewProvider {
     }
 }
 
-struct CustomConfigInputView: View {
-    @ObservedObject var settingsManager: SettingsManager
-    
-    var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack {
-                Text("Custom Configuration")
-                    .font(.subheadline)
-                    .fontWeight(.medium)
-                Spacer()
-            }
-            
-            let currentConfig = settingsManager.customDNSConfig.getConfig(for: settingsManager.selectedProtocol)
-            
-            Group {
-                switch settingsManager.selectedProtocol {
-                case .doH:
-                    VStack(alignment: .leading, spacing: 6) {
-                        Text("Server URL")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                        TextField("https://dns.example.com/dns-query", text: Binding(
-                            get: { currentConfig.url },
-                            set: { newValue in
-                                var newConfig = currentConfig
-                                newConfig.url = newValue
-                                settingsManager.updateCustomDNSConfig(for: .doH, config: newConfig)
-                            }
-                        ))
-                        .textFieldStyle(.roundedBorder)
-                        .font(.caption)
-                        
-                        Text("Host (optional)")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                        TextField("dns.example.com", text: Binding(
-                            get: { currentConfig.host },
-                            set: { newValue in
-                                var newConfig = currentConfig
-                                newConfig.host = newValue
-                                settingsManager.updateCustomDNSConfig(for: .doH, config: newConfig)
-                            }
-                        ))
-                        .textFieldStyle(.roundedBorder)
-                        .font(.caption)
-                    }
-                    
-                case .doT, .doQ:
-                    VStack(alignment: .leading, spacing: 6) {
-                        Text("Host")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                        TextField("dns.example.com", text: Binding(
-                            get: { currentConfig.host },
-                            set: { newValue in
-                                var newConfig = currentConfig
-                                newConfig.host = newValue
-                                settingsManager.updateCustomDNSConfig(for: settingsManager.selectedProtocol, config: newConfig)
-                            }
-                        ))
-                        .textFieldStyle(.roundedBorder)
-                        .font(.caption)
-                        
-                        Text("Port")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                        TextField("853", text: Binding(
-                            get: { String(currentConfig.port) },
-                            set: { newValue in
-                                var newConfig = currentConfig
-                                newConfig.port = Int(newValue) ?? 853
-                                settingsManager.updateCustomDNSConfig(for: settingsManager.selectedProtocol, config: newConfig)
-                            }
-                        ))
-                        .textFieldStyle(.roundedBorder)
-                        .font(.caption)
-                    }
-                }
-            }
-            .padding(8)
-            .background(Color(.controlBackgroundColor).opacity(0.3))
-            .cornerRadius(6)
-            
-            // Protocol description
-            Text(settingsManager.selectedProtocol.description)
-                .font(.caption2)
-                .foregroundColor(.secondary)
-                .padding(.top, 4)
-        }
-    }
-}
