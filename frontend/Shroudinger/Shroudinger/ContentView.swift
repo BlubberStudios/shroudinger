@@ -100,6 +100,9 @@ struct ContentView: View {
                             .font(.headline)
                     }
                     
+                    // DNS Server Configuration
+                    DNSServerView(settingsManager: settingsManager)
+                    
                     // Settings grouped properly
                     GroupBox {
                         VStack(spacing: 12) {
@@ -109,6 +112,12 @@ struct ContentView: View {
                                 Toggle("Encrypted DNS", isOn: $settingsManager.encryptedDNSEnabled)
                                     .toggleStyle(.switch)
                                     .labelsHidden()
+                                    .onChange(of: settingsManager.encryptedDNSEnabled) { newValue in
+                                        // BACKEND CALL: Update DNS encryption setting
+                                        Task {
+                                            await settingsManager.updateDNSConfiguration()
+                                        }
+                                    }
                             }
                             
                             Divider()

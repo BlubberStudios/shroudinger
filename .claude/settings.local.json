@@ -8,7 +8,9 @@
       "Bash(true)",
       "Bash(swift package:*)",
       "Bash(cp:*)",
-      "Bash(git clean:*)"
+      "Bash(git clean:*)",
+      "Bash(make:*)",
+      "Bash(swiftc:*)"
     ],
     "deny": []
   }
