@@ -8,7 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		E0F3C7152E21D04C00148A72 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = E0F3C7142E21D04C00148A72 /* Assets.xcassets */; };
-		E0F3C7282E21D2F600148A72 /* ShroudingerExtension.appex in Embed ExtensionKit Extensions */ = {isa = PBXBuildFile; fileRef = E0F3C71E2E21D2F600148A72 /* ShroudingerExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		E0F3C7282E21D2F600148A72 /* ShroudingerExtension.appex in Embed App Extensions */ = {isa = PBXBuildFile; fileRef = E0F3C71E2E21D2F600148A72 /* ShroudingerExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -36,15 +36,15 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXCopyFilesBuildPhase section */
-		E0F3C72D2E21D2F600148A72 /* Embed ExtensionKit Extensions */ = {
+		E0F3C72D2E21D2F600148A72 /* Embed App Extensions */ = {
 			isa = PBXCopyFilesBuildPhase;
 			buildActionMask = 2147483647;
-			dstPath = "$(EXTENSIONS_FOLDER_PATH)";
-			dstSubfolderSpec = 16;
+			dstPath = "";
+			dstSubfolderSpec = 13;
 			files = (
-				E0F3C7282E21D2F600148A72 /* ShroudingerExtension.appex in Embed ExtensionKit Extensions */,
+				E0F3C7282E21D2F600148A72 /* ShroudingerExtension.appex in Embed App Extensions */,
 			);
-			name = "Embed ExtensionKit Extensions";
+			name = "Embed App Extensions";
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXCopyFilesBuildPhase section */
@@ -160,7 +160,7 @@
 				E0F3C6DD2E21CD3000148A72 /* Sources */,
 				E0F3C6DE2E21CD3000148A72 /* Frameworks */,
 				E0F3C6DF2E21CD3000148A72 /* Resources */,
-				E0F3C72D2E21D2F600148A72 /* Embed ExtensionKit Extensions */,
+				E0F3C72D2E21D2F600148A72 /* Embed App Extensions */,
 			);
 			buildRules = (
 			);

@@ -26,7 +26,6 @@ class SettingsManager: ObservableObject {
         case cloudflare = "cloudflare"
         case quad9 = "quad9"
         case google = "google"
-        case nextdns = "nextdns"
         case custom = "custom"
         
         var id: String { rawValue }
@@ -39,8 +38,6 @@ class SettingsManager: ObservableObject {
                 return "Quad9"
             case .google:
                 return "Google"
-            case .nextdns:
-                return "NextDNS"
             case .custom:
                 return "Custom Server"
             }
@@ -54,8 +51,6 @@ class SettingsManager: ObservableObject {
                 return "Security-focused DNS with malware blocking"
             case .google:
                 return "Google's public DNS service"
-            case .nextdns:
-                return "Customizable DNS with advanced filtering"
             case .custom:
                 return "Configure your own DNS server"
             }
@@ -80,12 +75,6 @@ class SettingsManager: ObservableObject {
                     .doH: DNSServerConfig(host: "dns.google", port: 443, url: "https://dns.google/dns-query"),
                     .doT: DNSServerConfig(host: "8.8.8.8", port: 853, url: ""),
                     .doQ: DNSServerConfig(host: "8.8.8.8", port: 853, url: "")
-                ]
-            case .nextdns:
-                return [
-                    .doH: DNSServerConfig(host: "dns.nextdns.io", port: 443, url: "https://dns.nextdns.io/[profile]"),
-                    .doT: DNSServerConfig(host: "dns.nextdns.io", port: 853, url: ""),
-                    .doQ: DNSServerConfig(host: "dns.nextdns.io", port: 853, url: "")
                 ]
             case .custom:
                 return [

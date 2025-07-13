@@ -5,9 +5,8 @@ struct ShroudingerAppApp: App {
     var body: some Scene {
         WindowGroup {
             ContentView()
-                .frame(minWidth: 600, minHeight: 400)
         }
-        .windowStyle(DefaultWindowStyle())
+        .windowResizability(.contentSize)
         
         MenuBarExtra("Shroudinger", systemImage: "shield.fill") {
             Button("Show Main Window") {
