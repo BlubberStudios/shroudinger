@@ -142,6 +142,44 @@ struct DNSEncryptionView: View {
                 }
                 .buttonStyle(PlainButtonStyle())
                 
+                // Protocol Selection (when not custom)
+                if settingsManager.selectedDNSProvider != .custom {
+                    Menu {
+                        ForEach(SettingsManager.DNSProtocol.allCases) { dnsProtocol in
+                            Button(action: {
+                                settingsManager.selectedProtocol = dnsProtocol
+                                Task {
+                                    await settingsManager.updateDNSConfiguration()
+                                }
+                            }) {
+                                HStack {
+                                    Text(dnsProtocol.rawValue)
+                                    if settingsManager.selectedProtocol == dnsProtocol {
+                                        Spacer()
+                                        Image(systemName: "checkmark")
+                                            .foregroundColor(.blue)
+                                    }
+                                }
+                            }
+                        }
+                    } label: {
+                        HStack {
+                            Text(settingsManager.selectedProtocol.rawValue)
+                                .foregroundColor(.primary)
+                                .font(.system(size: 14, weight: .medium))
+                            
+                            Image(systemName: "chevron.up.chevron.down")
+                                .font(.system(size: 12))
+                                .foregroundColor(.blue)
+                        }
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 8)
+                        .background(Color(.controlBackgroundColor))
+                        .cornerRadius(6)
+                    }
+                    .buttonStyle(PlainButtonStyle())
+                }
+                
                 // Edit button for custom configuration
                 if settingsManager.selectedDNSProvider == .custom {
                     Button("Edit") {
@@ -376,14 +414,14 @@ struct CustomDNSConfigurationView: View {
                             .foregroundColor(.primary)
                         
                         Menu {
-                            ForEach(SettingsManager.DNSProtocol.allCases) { protocol in
+                            ForEach(SettingsManager.DNSProtocol.allCases) { dnsProtocol in
                                 Button(action: {
-                                    selectedProtocol = protocol
-                                    loadConfigForProtocol(protocol)
+                                    selectedProtocol = dnsProtocol
+                                    loadConfigForProtocol(dnsProtocol)
                                 }) {
                                     HStack {
-                                        Text(protocol.displayName)
-                                        if selectedProtocol == protocol {
+                                        Text(dnsProtocol.displayName)
+                                        if selectedProtocol == dnsProtocol {
                                             Spacer()
                                             Image(systemName: "checkmark")
                                                 .foregroundColor(.blue)
@@ -527,10 +565,10 @@ struct CustomDNSConfigurationView: View {
         }
     }
     
-    private func loadConfigForProtocol(_ protocol: SettingsManager.DNSProtocol) {
-        let config = settingsManager.customDNSConfig.getConfig(for: protocol)
+    private func loadConfigForProtocol(_ dnsProtocol: SettingsManager.DNSProtocol) {
+        let config = settingsManager.customDNSConfig.getConfig(for: dnsProtocol)
         
-        switch protocol {
+        switch dnsProtocol {
         case .doH:
             serverURL = config.url
             serverHost = config.host
