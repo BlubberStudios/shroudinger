@@ -359,14 +359,14 @@ class SettingsManager: ObservableObject {
                     let errorMessage = jsonResponse["error"] as? String
                     
                     // Extract performance data
-                    var actualResponseTime = responseTime
-                    if let performance = jsonResponse["performance"] as? [String: Any],
-                       let dnsTimeString = performance["dns_resolution_time"] as? String {
-                        // Parse duration string like "87ms" or "1.885753833s"
-                        if let parsed = parseDurationString(dnsTimeString) {
-                            actualResponseTime = parsed
+                    let actualResponseTime: TimeInterval = {
+                        if let performance = jsonResponse["performance"] as? [String: Any],
+                           let dnsTimeString = performance["dns_resolution_time"] as? String,
+                           let parsed = parseDurationString(dnsTimeString) {
+                            return parsed
                         }
-                    }
+                        return responseTime
+                    }()
                     
                     await MainActor.run {
                         lastTestResult = DNSTestResult(
