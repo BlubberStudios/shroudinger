@@ -10,7 +10,6 @@ struct DNSEncryptionView: View {
     @State private var isTestingConnection = false
     @State private var selectedTestDomain = "Random Domain"
     @State private var activeSheet: ActiveSheet? = nil
-    @State private var showingAlert = false
     
     enum TestResult {
         case success
@@ -70,35 +69,42 @@ struct DNSEncryptionView: View {
             .padding(.horizontal, 24)
             .padding(.vertical, 32)
         }
-        .sheet(item: $activeSheet) { sheet in
-            switch sheet {
-            case .customConfiguration:
-                CustomDNSConfigurationView(
-                    settingsManager: settingsManager,
-                    isPresented: Binding(
-                        get: { activeSheet == .customConfiguration },
-                        set: { _ in activeSheet = nil }
-                    )
-                )
-                .onAppear {
-                    print("🔧 CustomDNSConfigurationView appeared")
+        .sheet(isPresented: Binding(
+            get: { activeSheet == .customConfiguration },
+            set: { isPresented in
+                if !isPresented {
+                    activeSheet = nil
                 }
-            case .exception:
-                AddExceptionView(
-                    domain: $newExceptionDomain,
-                    dnsServer: $newExceptionDNSServer,
-                    isPresented: Binding(
-                        get: { activeSheet == .exception },
-                        set: { _ in activeSheet = nil }
-                    ),
-                    settingsManager: settingsManager
+            }
+        )) {
+            CustomDNSConfigurationView(
+                settingsManager: settingsManager,
+                isPresented: Binding(
+                    get: { activeSheet == .customConfiguration },
+                    set: { _ in activeSheet = nil }
                 )
+            )
+            .onAppear {
+                print("🔧 CustomDNSConfigurationView appeared")
             }
         }
-        .alert("Debug", isPresented: $showingAlert) {
-            Button("OK") { }
-        } message: {
-            Text("Edit button was clicked. Check console for sheet debug info.")
+        .sheet(isPresented: Binding(
+            get: { activeSheet == .exception },
+            set: { isPresented in
+                if !isPresented {
+                    activeSheet = nil
+                }
+            }
+        )) {
+            AddExceptionView(
+                domain: $newExceptionDomain,
+                dnsServer: $newExceptionDNSServer,
+                isPresented: Binding(
+                    get: { activeSheet == .exception },
+                    set: { _ in activeSheet = nil }
+                ),
+                settingsManager: settingsManager
+            )
         }
     }
     
@@ -232,10 +238,8 @@ struct DNSEncryptionView: View {
                 // Edit button for custom configuration
                 if settingsManager.selectedDNSProvider == .custom {
                     Button("Edit") {
-                        print("🔧 Edit button clicked - activeSheet was: \(String(describing: activeSheet))")
-                        showingAlert = true
+                        print("🔧 Edit button clicked - opening custom configuration")
                         activeSheet = .customConfiguration
-                        print("🔧 Edit button clicked - activeSheet is now: \(String(describing: activeSheet))")
                     }
                     .buttonStyle(.bordered)
                     .controlSize(.small)
@@ -603,119 +607,118 @@ struct CustomDNSConfigurationView: View {
     @State private var validationErrors: [String] = []
     
     var body: some View {
-        ZStack {
-            Color(.windowBackgroundColor)
-                .ignoresSafeArea()
-            
-            VStack(spacing: 0) {
-                // Header
-                HStack {
-                    Text("DNS Server Configuration")
-                        .font(.title2)
-                        .fontWeight(.medium)
-                    Spacer()
+        VStack(spacing: 0) {
+            // Header
+            HStack {
+                Text("DNS Server Configuration")
+                    .font(.title2)
+                    .fontWeight(.medium)
+                Spacer()
+                Button("Done") {
+                    isPresented = false
                 }
-                .padding(.horizontal, 24)
-                .padding(.vertical, 16)
-                .background(Color(.controlBackgroundColor))
-                
-                // Content
-                VStack(spacing: 24) {
-                    // Protocol Selection
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("Protocol")
-                            .font(.headline)
-                            .foregroundColor(.primary)
-                        
-                        Menu {
-                            ForEach(SettingsManager.DNSProtocol.allCases) { dnsProtocol in
-                                Button(action: {
-                                    selectedProtocol = dnsProtocol
-                                    loadConfigForProtocol(dnsProtocol)
-                                }) {
-                                    HStack {
-                                        Text(dnsProtocol.displayName)
-                                        if selectedProtocol == dnsProtocol {
-                                            Spacer()
-                                            Image(systemName: "checkmark")
-                                                .foregroundColor(.blue)
-                                        }
+                .buttonStyle(.bordered)
+                .controlSize(.small)
+            }
+            .padding(.horizontal, 24)
+            .padding(.vertical, 16)
+            .background(Color(.controlBackgroundColor))
+            
+            // Content
+            VStack(spacing: 24) {
+                // Protocol Selection
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Protocol")
+                        .font(.headline)
+                        .foregroundColor(.primary)
+                    
+                    Menu {
+                        ForEach(SettingsManager.DNSProtocol.allCases) { dnsProtocol in
+                            Button(action: {
+                                selectedProtocol = dnsProtocol
+                                loadConfigForProtocol(dnsProtocol)
+                            }) {
+                                HStack {
+                                    Text(dnsProtocol.displayName)
+                                    if selectedProtocol == dnsProtocol {
+                                        Spacer()
+                                        Image(systemName: "checkmark")
+                                            .foregroundColor(.blue)
                                     }
                                 }
                             }
-                        } label: {
-                            HStack {
-                                Text(selectedProtocol.displayName)
-                                    .foregroundColor(.primary)
-                                
-                                Spacer()
-                                
-                                Image(systemName: "chevron.up.chevron.down")
-                                    .font(.system(size: 12))
-                                    .foregroundColor(.blue)
-                            }
-                            .padding(.horizontal, 12)
-                            .padding(.vertical, 8)
-                            .background(Color(.textBackgroundColor))
-                            .cornerRadius(6)
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 6)
-                                    .stroke(Color(.separatorColor), lineWidth: 1)
-                            )
                         }
-                        .buttonStyle(PlainButtonStyle())
-                    }
-                    
-                    // Configuration Fields
-                    configurationFields
-                    
-                    // Validation Errors
-                    if !validationErrors.isEmpty {
-                        VStack(alignment: .leading, spacing: 8) {
-                            ForEach(validationErrors, id: \.self) { error in
-                                HStack {
-                                    Image(systemName: "exclamationmark.triangle")
-                                        .foregroundColor(.red)
-                                        .font(.system(size: 12))
-                                    Text(error)
-                                        .font(.caption)
-                                        .foregroundColor(.red)
-                                    Spacer()
-                                }
-                            }
+                    } label: {
+                        HStack {
+                            Text(selectedProtocol.displayName)
+                                .foregroundColor(.primary)
+                            
+                            Spacer()
+                            
+                            Image(systemName: "chevron.up.chevron.down")
+                                .font(.system(size: 12))
+                                .foregroundColor(.blue)
                         }
                         .padding(.horizontal, 12)
                         .padding(.vertical, 8)
-                        .background(Color.red.opacity(0.1))
+                        .background(Color(.textBackgroundColor))
                         .cornerRadius(6)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 6)
+                                .stroke(Color(.separatorColor), lineWidth: 1)
+                        )
                     }
-                    
-                    Spacer(minLength: 20)
-                    
-                    // Action Buttons - Always at bottom
-                    HStack(spacing: 12) {
-                        Button("Cancel") {
-                            // Reset values to original state
-                            loadConfigForProtocol(settingsManager.selectedProtocol)
-                            validationErrors = []
-                            isPresented = false
-                        }
-                        .buttonStyle(.bordered)
-                        .controlSize(.large)
-                        
-                        Button("Save") {
-                            if validateAndSaveConfiguration() {
-                                isPresented = false
+                    .buttonStyle(PlainButtonStyle())
+                }
+                
+                // Configuration Fields
+                configurationFields
+                
+                // Validation Errors
+                if !validationErrors.isEmpty {
+                    VStack(alignment: .leading, spacing: 8) {
+                        ForEach(validationErrors, id: \.self) { error in
+                            HStack {
+                                Image(systemName: "exclamationmark.triangle")
+                                    .foregroundColor(.red)
+                                    .font(.system(size: 12))
+                                Text(error)
+                                    .font(.caption)
+                                    .foregroundColor(.red)
+                                Spacer()
                             }
                         }
-                        .buttonStyle(.borderedProminent)
-                        .controlSize(.large)
                     }
-                    .padding(.top, 16)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 8)
+                    .background(Color.red.opacity(0.1))
+                    .cornerRadius(6)
                 }
-                .padding(.horizontal, 24)
-                .padding(.vertical, 24)
+                
+                Spacer()
+                
+                // Action Buttons
+                HStack(spacing: 12) {
+                    Button("Cancel") {
+                        // Reset values to original state
+                        loadConfigForProtocol(settingsManager.selectedProtocol)
+                        validationErrors = []
+                        isPresented = false
+                    }
+                    .buttonStyle(.bordered)
+                    .controlSize(.large)
+                    
+                    Button("Save") {
+                        if validateAndSaveConfiguration() {
+                            isPresented = false
+                        }
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .controlSize(.large)
+                }
             }
+            .padding(.horizontal, 24)
+            .padding(.vertical, 24)
         }
         .frame(width: 500, height: 500)
         .onAppear {
