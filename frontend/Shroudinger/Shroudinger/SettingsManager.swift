@@ -26,6 +26,7 @@ class SettingsManager: ObservableObject {
         case cloudflare = "cloudflare"
         case quad9 = "quad9"
         case google = "google"
+        case dns0 = "dns0"
         case custom = "custom"
         
         var id: String { rawValue }
@@ -38,8 +39,10 @@ class SettingsManager: ObservableObject {
                 return "Quad9"
             case .google:
                 return "Google"
+            case .dns0:
+                return "dns0.eu"
             case .custom:
-                return "Custom Server"
+                return "Custom"
             }
         }
         
@@ -51,6 +54,8 @@ class SettingsManager: ObservableObject {
                 return "Security-focused DNS with malware blocking"
             case .google:
                 return "Google's public DNS service"
+            case .dns0:
+                return "Privacy-focused DNS with zero-log policy"
             case .custom:
                 return "Configure your own DNS server"
             }
@@ -75,6 +80,12 @@ class SettingsManager: ObservableObject {
                     .doH: DNSServerConfig(host: "dns.google", port: 443, url: "https://dns.google/dns-query"),
                     .doT: DNSServerConfig(host: "8.8.8.8", port: 853, url: ""),
                     .doQ: DNSServerConfig(host: "8.8.8.8", port: 853, url: "")
+                ]
+            case .dns0:
+                return [
+                    .doH: DNSServerConfig(host: "dns0.eu", port: 443, url: "https://dns0.eu/dns-query"),
+                    .doT: DNSServerConfig(host: "193.110.81.0", port: 853, url: ""),
+                    .doQ: DNSServerConfig(host: "193.110.81.0", port: 853, url: "")
                 ]
             case .custom:
                 return [

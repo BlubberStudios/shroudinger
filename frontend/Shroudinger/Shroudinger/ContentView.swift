@@ -112,10 +112,8 @@ struct ContentView: View {
                 Divider()
                 
                 ScrollView {
-                    VStack(spacing: 16) {
-                        CompactDNSServerView(settingsManager: settingsManager)
-                    }
-                    .padding(16)
+                    DNSEncryptionView()
+                        .padding(16)
                 }
             }
             .frame(minWidth: 350)
