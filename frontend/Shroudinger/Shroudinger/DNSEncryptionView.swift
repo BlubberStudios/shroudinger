@@ -863,3 +863,16 @@ struct DNSEncryptionView_Previews: PreviewProvider {
             .frame(width: 600, height: 500)
     }
 }
+
+struct AddExceptionView_Previews: PreviewProvider {
+    static var previews: some View {
+        AddExceptionView(
+            domain: .constant(""),
+            dnsServer: .constant(""),
+            isPresented: .constant(true),
+            settingsManager: SettingsManager()
+        )
+        .preferredColorScheme(.dark)
+        .frame(width: 400, height: 250)
+    }
+}
