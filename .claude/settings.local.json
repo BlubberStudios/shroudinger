@@ -10,7 +10,8 @@
       "Bash(cp:*)",
       "Bash(git clean:*)",
       "Bash(make:*)",
-      "Bash(swiftc:*)"
+      "Bash(swiftc:*)",
+      "Bash(go mod:*)"
     ],
     "deny": []
   }
