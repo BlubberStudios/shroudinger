@@ -116,3 +116,98 @@ Temporary Items
 
 # Project-specific implementation plans
 Shared-Module-Implementation-Plan.md
+
+# Xcode Project-specific
+*.xcuserstate
+*.xcworkspace/xcuserdata/
+*.xcodeproj/xcuserdata/
+*.xcodeproj/project.xcworkspace/xcuserdata/
+DerivedData/
+.swiftpm/
+
+# Allow essential project files
+!*.xcodeproj/project.pbxproj
+!*.xcodeproj/project.xcworkspace/contents.xcworkspacedata
+!*.xcodeproj/xcshareddata/
+
+# Build outputs
+build/
+Build/
+**/build/
+**/Build/
+
+# Archives
+*.xcarchive
+
+# Provisioning profiles
+*.mobileprovision
+*.provisionprofile
+
+# Code signing
+*.p12
+*.cer
+*.certSigningRequest
+
+# Secrets and keys (DNS privacy app specific)
+*.pem
+*.key
+*.crt
+keys/
+secrets/
+.env
+.env.local
+.env.production
+
+# Logs
+*.log
+logs/
+crash_reports/
+
+# IDE specific
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Temporary files
+*.tmp
+*.temp
+tmp/
+temp/
+
+# Frontend specific (if using web technologies)
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Go backend specific
+# Binaries for programs and plugins
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Test binary, built with `go test -c`
+*.test
+
+# Output of the go coverage tool
+*.out
+coverage.txt
+
+# Go workspace file
+go.work
+
+# Go module cache
+go.sum
+
+# DNS blocklist cache (if implemented)
+blocklists/
+*.blocklist
+dns_cache/
+
+# Performance profiling
+*.prof
+*.trace
