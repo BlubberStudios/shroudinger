@@ -2,24 +2,26 @@ import SwiftUI
 
 @main
 struct ShroudingerAppApp: App {
+    @StateObject private var settingsManager = SettingsManager()
+    
     var body: some Scene {
         WindowGroup {
             ContentView()
         }
         .windowResizability(.contentSize)
+        .defaultSize(width: 400, height: 500)
+        .commands {
+            CommandGroup(replacing: .appInfo) {
+                Button("About Shroudinger") {
+                    // About dialog
+                }
+            }
+        }
         
         MenuBarExtra("Shroudinger", systemImage: "shield.fill") {
-            Button("Show Main Window") {
-                // Show main window
-            }
-            .keyboardShortcut("m", modifiers: [.command])
-            
-            Divider()
-            
-            Button("Quit") {
-                NSApplication.shared.terminate(nil)
-            }
-            .keyboardShortcut("q", modifiers: [.command])
+            MenuBarView()
+                .environmentObject(settingsManager)
         }
+        .menuBarExtraStyle(.window)
     }
 }
