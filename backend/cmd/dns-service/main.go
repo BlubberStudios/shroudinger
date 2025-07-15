@@ -147,10 +147,10 @@ func main() {
 		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			log.Fatalf("❌ Server failed to start: %v", err)
 		}
-	}())
+	}()
 
 	// Initialize DNS resolver
-	go initDNSResolver()
+	go initializeDNSResolver()
 
 	// Wait for interrupt signal
 	quit := make(chan os.Signal, 1)
