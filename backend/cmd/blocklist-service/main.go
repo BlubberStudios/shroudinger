@@ -127,10 +127,8 @@ func main() {
 		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			log.Fatalf("❌ Server failed to start: %v", err)
 		}
-	}())
+	}()
 
-	// Initialize blocklist management
-	go initBlocklistManager()
 
 	// Wait for interrupt signal
 	quit := make(chan os.Signal, 1)
