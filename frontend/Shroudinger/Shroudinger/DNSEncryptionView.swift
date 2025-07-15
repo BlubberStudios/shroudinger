@@ -8,11 +8,24 @@ struct DNSEncryptionView: View {
     @State private var newExceptionDNSServer = ""
     @State private var testResult: TestResult?
     @State private var isTestingConnection = false
+    @State private var selectedTestDomain = "Random Domain"
     
     enum TestResult {
         case success
         case failure(String)
     }
+    
+    // Predefined test domains
+    private let testDomains = [
+        "Random Domain",
+        "Google.com",
+        "Facebook.com", 
+        "GitHub.com",
+        "Apple.com",
+        "Microsoft.com",
+        "Amazon.com",
+        "Netflix.com"
+    ]
     
     var body: some View {
         ZStack {
@@ -33,6 +46,11 @@ struct DNSEncryptionView: View {
                 // Add Exception Section
                 addExceptionSection
                 
+                // Current Exceptions Section
+                if !settingsManager.dnsExceptions.isEmpty {
+                    currentExceptionsSection
+                }
+                
                 Spacer()
             }
             .padding(.horizontal, 24)
@@ -48,7 +66,8 @@ struct DNSEncryptionView: View {
             AddExceptionView(
                 domain: $newExceptionDomain,
                 dnsServer: $newExceptionDNSServer,
-                isPresented: $showingExceptionDialog
+                isPresented: $showingExceptionDialog,
+                settingsManager: settingsManager
             )
         }
     }
@@ -244,13 +263,14 @@ struct DNSEncryptionView: View {
                 
                 // Random Domain selector (for testing)
                 Menu {
-                    Button("Random Domain") { }
-                    Button("Google.com") { }
-                    Button("Facebook.com") { }
-                    Button("GitHub.com") { }
+                    ForEach(testDomains, id: \.self) { domain in
+                        Button(domain) {
+                            selectedTestDomain = domain
+                        }
+                    }
                 } label: {
                     HStack {
-                        Text("Random Domain")
+                        Text(selectedTestDomain)
                             .font(.system(size: 14, weight: .medium))
                         
                         Image(systemName: "chevron.up.chevron.down")
@@ -316,6 +336,52 @@ struct DNSEncryptionView: View {
         }
     }
     
+    // MARK: - Current Exceptions Section
+    private var currentExceptionsSection: some View {
+        VStack(spacing: 16) {
+            HStack {
+                Text("Current Exceptions")
+                    .font(.headline)
+                    .foregroundColor(.primary)
+                Spacer()
+            }
+            
+            VStack(spacing: 8) {
+                ForEach(settingsManager.dnsExceptions) { exception in
+                    HStack {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(exception.domain)
+                                .font(.subheadline)
+                                .fontWeight(.medium)
+                                .foregroundColor(.primary)
+                            
+                            if !exception.dnsServer.isEmpty {
+                                Text("DNS: \(exception.dnsServer)")
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                            }
+                        }
+                        
+                        Spacer()
+                        
+                        Button(action: {
+                            settingsManager.removeDNSException(withId: exception.id)
+                        }) {
+                            Image(systemName: "xmark.circle.fill")
+                                .foregroundColor(.red)
+                                .font(.system(size: 16))
+                        }
+                        .buttonStyle(PlainButtonStyle())
+                    }
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 8)
+                    .background(Color(.controlBackgroundColor))
+                    .cornerRadius(6)
+                }
+            }
+        }
+    }
+    
     // MARK: - Helper Methods
     private func getDisplayURL(config: SettingsManager.DNSServerConfig) -> String {
         switch settingsManager.selectedProtocol {
@@ -326,12 +392,22 @@ struct DNSEncryptionView: View {
         }
     }
     
+    private func getTestDomain() -> String {
+        let availableDomains = ["google.com", "facebook.com", "github.com", "apple.com", "microsoft.com", "amazon.com", "netflix.com"]
+        
+        if selectedTestDomain == "Random Domain" {
+            return availableDomains.randomElement() ?? "google.com"
+        } else {
+            return selectedTestDomain.lowercased()
+        }
+    }
+    
     private func testConnection() {
         isTestingConnection = true
         testResult = nil
         
         Task {
-            await settingsManager.testDNSConnection()
+            await settingsManager.testDNSConnection(testDomain: getTestDomain())
             
             await MainActor.run {
                 isTestingConnection = false
@@ -387,6 +463,7 @@ struct CustomDNSConfigurationView: View {
     @State private var username = ""
     @State private var password = ""
     @State private var serverSPKI = ""
+    @State private var validationErrors: [String] = []
     
     var body: some View {
         ZStack {
@@ -454,6 +531,27 @@ struct CustomDNSConfigurationView: View {
                     
                     // Configuration Fields
                     configurationFields
+                    
+                    // Validation Errors
+                    if !validationErrors.isEmpty {
+                        VStack(alignment: .leading, spacing: 8) {
+                            ForEach(validationErrors, id: \.self) { error in
+                                HStack {
+                                    Image(systemName: "exclamationmark.triangle")
+                                        .foregroundColor(.red)
+                                        .font(.system(size: 12))
+                                    Text(error)
+                                        .font(.caption)
+                                        .foregroundColor(.red)
+                                    Spacer()
+                                }
+                            }
+                        }
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 8)
+                        .background(Color.red.opacity(0.1))
+                        .cornerRadius(6)
+                    }
                     
                     Spacer()
                     
@@ -578,7 +676,39 @@ struct CustomDNSConfigurationView: View {
         }
     }
     
+    private func validateConfiguration() -> [String] {
+        var errors: [String] = []
+        
+        switch selectedProtocol {
+        case .doH:
+            if serverURL.isEmpty {
+                errors.append("Server URL is required for DoH")
+            } else if !serverURL.hasPrefix("https://") {
+                errors.append("Server URL must start with https://")
+            }
+        case .doT, .doQ:
+            if serverHost.isEmpty {
+                errors.append("Server Host is required")
+            }
+            if let port = Int(serverPort) {
+                if port < 1 || port > 65535 {
+                    errors.append("Port must be between 1 and 65535")
+                }
+            } else {
+                errors.append("Port must be a valid number")
+            }
+        }
+        
+        return errors
+    }
+    
     private func saveConfiguration() {
+        validationErrors = validateConfiguration()
+        
+        if !validationErrors.isEmpty {
+            return
+        }
+        
         var config = SettingsManager.DNSServerConfig()
         
         switch selectedProtocol {
@@ -605,6 +735,8 @@ struct AddExceptionView: View {
     @Binding var domain: String
     @Binding var dnsServer: String
     @Binding var isPresented: Bool
+    @ObservedObject var settingsManager: SettingsManager
+    @State private var validationError: String?
     
     var body: some View {
         ZStack {
@@ -637,6 +769,23 @@ struct AddExceptionView: View {
                         .textFieldStyle(CustomTextFieldStyle())
                 }
                 
+                // Validation Error
+                if let error = validationError {
+                    HStack {
+                        Image(systemName: "exclamationmark.triangle")
+                            .foregroundColor(.red)
+                            .font(.system(size: 12))
+                        Text(error)
+                            .font(.caption)
+                            .foregroundColor(.red)
+                        Spacer()
+                    }
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 8)
+                    .background(Color.red.opacity(0.1))
+                    .cornerRadius(6)
+                }
+                
                 // Action buttons
                 HStack(spacing: 12) {
                     Button("Cancel") {
@@ -646,8 +795,13 @@ struct AddExceptionView: View {
                     .controlSize(.large)
                     
                     Button("Add Exception") {
-                        // TODO: Implement add exception logic
-                        isPresented = false
+                        if validateDomain() {
+                            settingsManager.addDNSException(domain: domain, dnsServer: dnsServer)
+                            domain = ""
+                            dnsServer = ""
+                            validationError = nil
+                            isPresented = false
+                        }
                     }
                     .buttonStyle(.borderedProminent)
                     .controlSize(.large)
@@ -657,6 +811,33 @@ struct AddExceptionView: View {
             .padding(24)
         }
         .frame(width: 400, height: 250)
+    }
+    
+    private func validateDomain() -> Bool {
+        let trimmedDomain = domain.trimmingCharacters(in: .whitespacesAndNewlines)
+        
+        if trimmedDomain.isEmpty {
+            validationError = "Domain is required"
+            return false
+        }
+        
+        // Basic domain validation
+        let domainRegex = "^[a-zA-Z0-9][a-zA-Z0-9-]{0,61}[a-zA-Z0-9]?\\.[a-zA-Z]{2,}$"
+        let domainPredicate = NSPredicate(format: "SELF MATCHES %@", domainRegex)
+        
+        if !domainPredicate.evaluate(with: trimmedDomain) {
+            validationError = "Please enter a valid domain name"
+            return false
+        }
+        
+        // Check if domain already exists
+        if settingsManager.dnsExceptions.contains(where: { $0.domain == trimmedDomain }) {
+            validationError = "This domain already has an exception"
+            return false
+        }
+        
+        validationError = nil
+        return true
     }
 }
 

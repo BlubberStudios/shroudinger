@@ -18,8 +18,24 @@ class SettingsManager: ObservableObject {
     @Published var customDNSConfig: CustomDNSConfig = CustomDNSConfig()
     @Published var isTestingConnection: Bool = false
     @Published var lastTestResult: DNSTestResult? = nil
+    @Published var dnsExceptions: [DNSException] = []
     
     private let userDefaults = UserDefaults.standard
+    
+    // DNS Exception struct
+    struct DNSException: Codable, Identifiable {
+        let id: UUID
+        let domain: String
+        let dnsServer: String
+        let dateAdded: Date
+        
+        init(domain: String, dnsServer: String = "") {
+            self.id = UUID()
+            self.domain = domain
+            self.dnsServer = dnsServer
+            self.dateAdded = Date()
+        }
+    }
     
     // DNS Provider enum
     enum DNSProvider: String, CaseIterable, Identifiable {
@@ -215,6 +231,7 @@ class SettingsManager: ObservableObject {
         }
         
         loadCustomDNSConfig()
+        loadDNSExceptions()
         
         // Set defaults if not previously set
         if !userDefaults.bool(forKey: "settingsInitialized") {
@@ -291,7 +308,7 @@ class SettingsManager: ObservableObject {
     
     // MARK: - Backend Communication
     
-    func testDNSConnection() async {
+    func testDNSConnection(testDomain: String = "google.com") async {
         await MainActor.run {
             isTestingConnection = true
         }
@@ -321,7 +338,8 @@ class SettingsManager: ObservableObject {
             "protocol": selectedProtocol.rawValue,
             "host": config.host,
             "port": config.port,
-            "url": config.url
+            "url": config.url,
+            "testDomain": testDomain
         ] as [String : Any]
         
         do {
@@ -401,6 +419,40 @@ class SettingsManager: ObservableObject {
             // Configuration updated successfully
         } catch {
             print("Failed to update DNS configuration: \(error)")
+        }
+    }
+    
+    // MARK: - Exception Management
+    
+    func addDNSException(domain: String, dnsServer: String = "") {
+        let exception = DNSException(domain: domain, dnsServer: dnsServer)
+        dnsExceptions.append(exception)
+        saveDNSExceptions()
+    }
+    
+    func removeDNSException(withId id: UUID) {
+        dnsExceptions.removeAll { $0.id == id }
+        saveDNSExceptions()
+    }
+    
+    func removeDNSException(forDomain domain: String) {
+        dnsExceptions.removeAll { $0.domain == domain }
+        saveDNSExceptions()
+    }
+    
+    private func saveDNSExceptions() {
+        let encoder = JSONEncoder()
+        if let data = try? encoder.encode(dnsExceptions) {
+            userDefaults.set(data, forKey: "dnsExceptions")
+        }
+    }
+    
+    private func loadDNSExceptions() {
+        if let data = userDefaults.data(forKey: "dnsExceptions") {
+            let decoder = JSONDecoder()
+            if let exceptions = try? decoder.decode([DNSException].self, from: data) {
+                dnsExceptions = exceptions
+            }
         }
     }
 }
