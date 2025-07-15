@@ -5,6 +5,7 @@ struct ContentView: View {
     @State private var isExtensionActive = false
     @State private var blockedQueries = 0
     @State private var totalQueries = 0
+    @State private var showAdvancedSettings = false
     
     var body: some View {
         HStack(spacing: 0) {
@@ -79,8 +80,10 @@ struct ContentView: View {
                 
                 // Action buttons
                 VStack(spacing: 8) {
-                    Button("Advanced Settings") {
-                        // Show settings
+                    Button(showAdvancedSettings ? "Hide Advanced Settings" : "Advanced Settings") {
+                        withAnimation(.easeInOut(duration: 0.3)) {
+                            showAdvancedSettings.toggle()
+                        }
                     }
                     .buttonStyle(.bordered)
                     .controlSize(.regular)
@@ -95,30 +98,33 @@ struct ContentView: View {
             .frame(width: 280)
             .padding(16)
             
-            Divider()
-            
-            // Right Panel - DNS Configuration
-            VStack(spacing: 0) {
-                // DNS Configuration Header
-                HStack {
-                    Label("DNS Configuration", systemImage: "network")
-                        .font(.headline)
-                    Spacer()
-                }
-                .padding(.horizontal, 16)
-                .padding(.vertical, 12)
-                .background(Color(.controlBackgroundColor))
-                
+            if showAdvancedSettings {
                 Divider()
                 
-                ScrollView {
-                    DNSEncryptionView()
-                        .padding(16)
+                // Right Panel - DNS Configuration
+                VStack(spacing: 0) {
+                    // DNS Configuration Header
+                    HStack {
+                        Label("DNS Configuration", systemImage: "network")
+                            .font(.headline)
+                        Spacer()
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 12)
+                    .background(Color(.controlBackgroundColor))
+                    
+                    Divider()
+                    
+                    ScrollView {
+                        DNSEncryptionView()
+                            .padding(16)
+                    }
                 }
+                .frame(minWidth: 350)
+                .transition(.move(edge: .trailing))
             }
-            .frame(minWidth: 350)
         }
-        .frame(minWidth: 680, maxWidth: 1200, minHeight: 480, maxHeight: .infinity)
+        .frame(minWidth: showAdvancedSettings ? 680 : 300, maxWidth: showAdvancedSettings ? 1200 : 320, minHeight: 480, maxHeight: .infinity)
         .background(Color(.windowBackgroundColor))
     }
 }

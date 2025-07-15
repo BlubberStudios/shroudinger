@@ -244,7 +244,43 @@ struct DNSEncryptionView: View {
             
             // DNS Configuration Description
             let currentConfig = settingsManager.getCurrentDNSConfig()
-            if !currentConfig.host.isEmpty {
+            if settingsManager.selectedDNSProvider == .custom {
+                // Show custom configuration status
+                let isConfigured = (settingsManager.selectedProtocol == .doH && !currentConfig.url.isEmpty) || 
+                                  (settingsManager.selectedProtocol != .doH && !currentConfig.host.isEmpty)
+                
+                HStack {
+                    if isConfigured {
+                        Text("DNS requests are sent to ")
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
+                        + Text(getDisplayURL(config: currentConfig))
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
+                        + Text(" using ")
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
+                        + Text(settingsManager.selectedProtocol.displayName)
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
+                        + Text(".")
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
+                    } else {
+                        HStack(spacing: 8) {
+                            Image(systemName: "exclamationmark.triangle")
+                                .foregroundColor(.orange)
+                                .font(.system(size: 12))
+                            Text("Custom DNS configuration is incomplete. Click 'Edit' to configure your \(settingsManager.selectedProtocol.rawValue) server.")
+                                .font(.subheadline)
+                                .foregroundColor(.orange)
+                        }
+                    }
+                    
+                    Spacer()
+                }
+                .padding(.horizontal, 4)
+            } else if !currentConfig.host.isEmpty {
                 HStack {
                     Text("DNS requests are sent to ")
                         .font(.subheadline)
@@ -454,9 +490,29 @@ struct DNSEncryptionView: View {
         // Check if custom DNS configuration is complete
         if settingsManager.selectedDNSProvider == .custom {
             let config = settingsManager.getCurrentDNSConfig()
-            if config.host.isEmpty {
+            
+            // Validate based on protocol
+            var configurationValid = false
+            var errorMessage = ""
+            
+            switch settingsManager.selectedProtocol {
+            case .doH:
+                if !config.url.isEmpty {
+                    configurationValid = true
+                } else {
+                    errorMessage = "Custom DoH configuration requires a valid HTTPS URL. Please edit the configuration."
+                }
+            case .doT, .doQ:
+                if !config.host.isEmpty {
+                    configurationValid = true
+                } else {
+                    errorMessage = "Custom \(settingsManager.selectedProtocol.rawValue) configuration requires a valid host. Please edit the configuration."
+                }
+            }
+            
+            if !configurationValid {
                 isTestingConnection = false
-                testResult = .failure("Custom DNS configuration is incomplete. Please edit the configuration first.")
+                testResult = .failure(errorMessage)
                 return
             }
         }
@@ -481,14 +537,24 @@ struct DNSEncryptionView: View {
     private func getDetailedErrorMessage(_ error: String) -> String {
         if error.contains("Invalid backend URL") {
             return "Backend service is not running. Please start the DNS service first."
-        } else if error.contains("configuration is incomplete") {
+        } else if error.contains("configuration is incomplete") || error.contains("configuration requires") {
             return "Click 'Edit' to configure your custom DNS server settings."
         } else if error.contains("Server returned error") {
-            return "DNS server configuration is incomplete or invalid. Please check your custom DNS settings."
+            if settingsManager.selectedDNSProvider == .custom {
+                return "Custom DNS server configuration is incomplete or invalid. Please check your settings."
+            } else {
+                return "DNS server returned an error. Please try a different DNS provider."
+            }
         } else if error.contains("connection failed") {
             return "Unable to connect to the DNS server. Please check your network connection and server settings."
         } else if error.contains("Invalid JSON") {
             return "Communication error with backend service. Please restart the application."
+        } else if error.contains("DoH request failed") {
+            return "DNS over HTTPS request failed. Please check your DoH server URL and try again."
+        } else if error.contains("DoT connection failed") {
+            return "DNS over TLS connection failed. Please check your DoT server host and port."
+        } else if error.contains("DoQ connection failed") {
+            return "DNS over QUIC connection failed. Please check your DoQ server host and port."
         } else {
             return error
         }
@@ -624,29 +690,34 @@ struct CustomDNSConfigurationView: View {
                         .cornerRadius(6)
                     }
                     
-                    Spacer()
+                    Spacer(minLength: 20)
                     
-                    // Action Buttons
+                    // Action Buttons - Always at bottom
                     HStack(spacing: 12) {
                         Button("Cancel") {
+                            // Reset values to original state
+                            loadConfigForProtocol(settingsManager.selectedProtocol)
+                            validationErrors = []
                             isPresented = false
                         }
                         .buttonStyle(.bordered)
                         .controlSize(.large)
                         
-                        Button("OK") {
-                            saveConfiguration()
-                            isPresented = false
+                        Button("Save") {
+                            if validateAndSaveConfiguration() {
+                                isPresented = false
+                            }
                         }
                         .buttonStyle(.borderedProminent)
                         .controlSize(.large)
                     }
+                    .padding(.top, 16)
                 }
                 .padding(.horizontal, 24)
                 .padding(.vertical, 24)
             }
         }
-        .frame(width: 500, height: 400)
+        .frame(width: 500, height: 500)
         .onAppear {
             loadConfigForProtocol(settingsManager.selectedProtocol)
             selectedProtocol = settingsManager.selectedProtocol
@@ -773,11 +844,11 @@ struct CustomDNSConfigurationView: View {
         return errors
     }
     
-    private func saveConfiguration() {
+    private func validateAndSaveConfiguration() -> Bool {
         validationErrors = validateConfiguration()
         
         if !validationErrors.isEmpty {
-            return
+            return false
         }
         
         var config = SettingsManager.DNSServerConfig()
@@ -798,6 +869,8 @@ struct CustomDNSConfigurationView: View {
         Task {
             await settingsManager.updateDNSConfiguration()
         }
+        
+        return true
     }
 }
 
