@@ -12,6 +12,7 @@ package main
 
 import (
 	"context"
+	"crypto/tls"
 	"fmt"
 	"log"
 	"net"
@@ -598,26 +599,40 @@ func performDoTTest(req DNSTestRequest) DNSTestResult {
 		Encryption: "unknown",
 	}
 	
-	// For now, simulate DoT test since implementing full TLS DNS client is complex
-	// This would require a proper DNS client library
-	
-	// Simulate connection test
+	// Test actual TLS connection to DNS server
 	address := fmt.Sprintf("%s:%d", req.Host, req.Port)
 	
-	// Test basic connectivity
-	conn, err := net.DialTimeout("tcp", address, 3*time.Second)
+	// Test TLS connectivity (actual DoT requires TLS)
+	conn, err := tls.DialWithDialer(
+		&net.Dialer{Timeout: 3 * time.Second},
+		"tcp",
+		address,
+		&tls.Config{
+			ServerName: req.Host,
+			// For testing, we'll skip certificate verification
+			// In production, this should be configurable
+			InsecureSkipVerify: true,
+		},
+	)
 	if err != nil {
-		result.Error = fmt.Sprintf("DoT connection failed: %v", err)
+		result.Error = fmt.Sprintf("DoT TLS connection failed: %v", err)
 		result.ResponseTime = time.Since(start)
 		return result
 	}
 	defer conn.Close()
 	
-	// Basic connection successful
-	result.Success = true
-	result.Encryption = "verified"
-	result.ResponseTime = time.Since(start)
+	// Verify TLS connection state
+	state := conn.ConnectionState()
+	if state.HandshakeComplete {
+		result.Success = true
+		result.Encryption = "verified"
+		log.Printf("✅ DoT connection successful to %s (TLS version: %x)", address, state.Version)
+	} else {
+		result.Error = "TLS handshake not complete"
+		result.Encryption = "failed"
+	}
 	
+	result.ResponseTime = time.Since(start)
 	return result
 }
 

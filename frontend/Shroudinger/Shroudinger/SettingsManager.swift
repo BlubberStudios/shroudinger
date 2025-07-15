@@ -342,6 +342,14 @@ class SettingsManager: ObservableObject {
             "testDomain": testDomain
         ] as [String : Any]
         
+        // Debug logging
+        print("🚀 DNS Test Request Debug:")
+        print("   Protocol: \(selectedProtocol.rawValue)")
+        print("   Host: \(config.host)")
+        print("   Port: \(config.port)")
+        print("   URL: \(config.url)")
+        print("   Test Domain: \(testDomain)")
+        
         do {
             request.httpBody = try JSONSerialization.data(withJSONObject: testRequest)
             
@@ -358,6 +366,14 @@ class SettingsManager: ObservableObject {
                     let encryption = jsonResponse["encryption"] as? String == "verified"
                     let errorMessage = jsonResponse["error"] as? String
                     
+                    // Debug logging
+                    print("🔍 DNS Test Response Debug:")
+                    print("   Status: \(jsonResponse["status"] as? String ?? "nil") -> testCompleted: \(testCompleted)")
+                    print("   Success: \(jsonResponse["success"] as? Bool ?? false) -> testSuccess: \(testSuccess)")
+                    print("   Encryption: \(jsonResponse["encryption"] as? String ?? "nil") -> encryption: \(encryption)")
+                    print("   Error: \(jsonResponse["error"] as? String ?? "nil")")
+                    print("   Final success: \(testCompleted && testSuccess && encryption)")
+                    
                     // Extract performance data
                     let actualResponseTime: TimeInterval = {
                         if let performance = jsonResponse["performance"] as? [String: Any],
@@ -369,10 +385,13 @@ class SettingsManager: ObservableObject {
                     }()
                     
                     await MainActor.run {
+                        let finalSuccess = testCompleted && testSuccess && encryption
+                        let finalError = finalSuccess ? nil : (errorMessage?.isEmpty == false ? errorMessage : "DNS test failed - check configuration")
+                        
                         lastTestResult = DNSTestResult(
-                            success: testCompleted && testSuccess && encryption,
+                            success: finalSuccess,
                             responseTime: actualResponseTime,
-                            error: testSuccess && encryption ? nil : (errorMessage ?? "Test failed"),
+                            error: finalError,
                             dnsProtocol: selectedProtocol,
                             server: config.host
                         )
