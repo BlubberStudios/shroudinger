@@ -14,7 +14,12 @@
       "Bash(go mod:*)",
       "Bash(find:*)",
       "Bash(go build:*)",
-      "Bash(git push:*)"
+      "Bash(git push:*)",
+      "Bash(curl:*)",
+      "Bash(chmod:*)",
+      "Bash(./docs/testing/test_connection_button.sh:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)"
     ],
     "deny": []
   }
