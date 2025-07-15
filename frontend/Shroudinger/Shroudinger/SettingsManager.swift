@@ -36,7 +36,7 @@ class SettingsManager: ObservableObject {
     private let userDefaults = UserDefaults.standard
     
     // Service Status
-    enum ServiceStatus {
+    enum ServiceStatus: Equatable {
         case stopped
         case starting
         case running
@@ -242,6 +242,24 @@ class SettingsManager: ObservableObject {
         lastStatsUpdate = Date()
         
         loadSettings()
+        
+        // Check service status on startup (async)
+        checkInitialServiceStatus()
+    }
+    
+    private func checkInitialServiceStatus() {
+        Task {
+            await checkServiceHealth()
+            let allServicesRunning = apiServiceStatus == .running && 
+                                    dnsServiceStatus == .running && 
+                                    middlewareServiceStatus == .running && 
+                                    blocklistServiceStatus == .running
+            
+            if allServicesRunning {
+                servicesRunning = true
+                startStatsMonitoring()
+            }
+        }
     }
     
     private func loadSettings() {
@@ -501,6 +519,22 @@ class SettingsManager: ObservableObject {
     // MARK: - Service Management
     
     func startServices() async {
+        // First check if services are already running
+        await checkServiceHealth()
+        
+        let allServicesRunning = apiServiceStatus == .running && 
+                                dnsServiceStatus == .running && 
+                                middlewareServiceStatus == .running && 
+                                blocklistServiceStatus == .running
+        
+        if allServicesRunning {
+            // Services are already running, just update state
+            servicesRunning = true
+            startStatsMonitoring()
+            return
+        }
+        
+        // Services not running, start them
         servicesRunning = true
         apiServiceStatus = .starting
         dnsServiceStatus = .starting
@@ -519,6 +553,16 @@ class SettingsManager: ObservableObject {
             
             // Start stats monitoring
             startStatsMonitoring()
+            
+            // Verify services actually started
+            let servicesStarted = apiServiceStatus == .running && 
+                                 dnsServiceStatus == .running && 
+                                 middlewareServiceStatus == .running && 
+                                 blocklistServiceStatus == .running
+            
+            if !servicesStarted {
+                servicesRunning = false
+            }
         } else {
             servicesRunning = false
             apiServiceStatus = .error(result.error ?? "Failed to start")

@@ -27,7 +27,10 @@
       "Bash(kill:*)",
       "Bash(git rebase:*)",
       "Bash(lsof:*)",
-      "Bash(osascript:*)"
+      "Bash(osascript:*)",
+      "Bash(timeout 5 make dev)",
+      "Bash(/dev/null)",
+      "Bash(echo:*)"
     ],
     "deny": []
   }
