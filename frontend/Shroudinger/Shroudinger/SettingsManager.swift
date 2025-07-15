@@ -20,7 +20,36 @@ class SettingsManager: ObservableObject {
     @Published var lastTestResult: DNSTestResult? = nil
     @Published var dnsExceptions: [DNSException] = []
     
+    // Service Management
+    @Published var servicesRunning: Bool = false
+    @Published var blockedCount: Int = 0
+    @Published var totalCount: Int = 0
+    @Published var lastStatsUpdate: Date = Date()
+    
+    // Service Status
+    @Published var apiServiceStatus: ServiceStatus = .stopped
+    @Published var dnsServiceStatus: ServiceStatus = .stopped
+    @Published var middlewareServiceStatus: ServiceStatus = .stopped
+    @Published var blocklistServiceStatus: ServiceStatus = .stopped
+    
     private let userDefaults = UserDefaults.standard
+    
+    // Service Status
+    enum ServiceStatus {
+        case stopped
+        case starting
+        case running
+        case error(String)
+        
+        var displayName: String {
+            switch self {
+            case .stopped: return "Stopped"
+            case .starting: return "Starting"
+            case .running: return "Running"
+            case .error(let message): return "Error: \(message)"
+            }
+        }
+    }
     
     // DNS Exception struct
     struct DNSException: Codable, Identifiable {
@@ -470,6 +499,165 @@ class SettingsManager: ObservableObject {
             if let exceptions = try? decoder.decode([DNSException].self, from: data) {
                 dnsExceptions = exceptions
             }
+        }
+    }
+    
+    // MARK: - Service Management
+    
+    func startServices() async {
+        await MainActor.run {
+            servicesRunning = true
+            apiServiceStatus = .starting
+            dnsServiceStatus = .starting
+            middlewareServiceStatus = .starting
+            blocklistServiceStatus = .starting
+        }
+        
+        // Start backend services using make dev
+        let result = await executeCommand("make", args: ["dev"])
+        
+        if result.success {
+            // Give services time to start
+            try? await Task.sleep(nanoseconds: 2_000_000_000) // 2 seconds
+            
+            // Check service health
+            await checkServiceHealth()
+            
+            // Start stats monitoring
+            startStatsMonitoring()
+        } else {
+            await MainActor.run {
+                servicesRunning = false
+                apiServiceStatus = .error(result.error ?? "Failed to start")
+                dnsServiceStatus = .error(result.error ?? "Failed to start")
+                middlewareServiceStatus = .error(result.error ?? "Failed to start")
+                blocklistServiceStatus = .error(result.error ?? "Failed to start")
+            }
+        }
+    }
+    
+    func stopServices() async {
+        await MainActor.run {
+            servicesRunning = false
+            apiServiceStatus = .stopped
+            dnsServiceStatus = .stopped
+            middlewareServiceStatus = .stopped
+            blocklistServiceStatus = .stopped
+        }
+        
+        // Stop backend services using make dev-stop
+        let _ = await executeCommand("make", args: ["dev-stop"])
+        
+        // Stop stats monitoring
+        stopStatsMonitoring()
+    }
+    
+    private func checkServiceHealth() async {
+        // Check each service health endpoint
+        let services = [
+            ("API", "http://localhost:8080/health", \SettingsManager.apiServiceStatus),
+            ("DNS", "http://localhost:8082/health", \SettingsManager.dnsServiceStatus),
+            ("Middleware", "http://localhost:8083/health", \SettingsManager.middlewareServiceStatus),
+            ("Blocklist", "http://localhost:8081/health", \SettingsManager.blocklistServiceStatus)
+        ]
+        
+        for (name, urlString, statusKeyPath) in services {
+            guard let url = URL(string: urlString) else {
+                await MainActor.run {
+                    self[keyPath: statusKeyPath] = .error("Invalid URL")
+                }
+                continue
+            }
+            
+            do {
+                let (_, response) = try await URLSession.shared.data(from: url)
+                
+                if let httpResponse = response as? HTTPURLResponse {
+                    await MainActor.run {
+                        if httpResponse.statusCode == 200 {
+                            self[keyPath: statusKeyPath] = .running
+                        } else {
+                            self[keyPath: statusKeyPath] = .error("HTTP \(httpResponse.statusCode)")
+                        }
+                    }
+                }
+            } catch {
+                await MainActor.run {
+                    self[keyPath: statusKeyPath] = .error(error.localizedDescription)
+                }
+            }
+        }
+    }
+    
+    private func executeCommand(_ command: String, args: [String]) async -> (success: Bool, error: String?) {
+        return await withCheckedContinuation { continuation in
+            let process = Process()
+            process.executableURL = URL(fileURLWithPath: "/usr/bin/env")
+            process.arguments = [command] + args
+            
+            let pipe = Pipe()
+            process.standardOutput = pipe
+            process.standardError = pipe
+            
+            do {
+                try process.run()
+                process.waitUntilExit()
+                
+                let data = pipe.fileHandleForReading.readDataToEndOfFile()
+                let output = String(data: data, encoding: .utf8) ?? ""
+                
+                if process.terminationStatus == 0 {
+                    continuation.resume(returning: (true, nil))
+                } else {
+                    continuation.resume(returning: (false, output))
+                }
+            } catch {
+                continuation.resume(returning: (false, error.localizedDescription))
+            }
+        }
+    }
+    
+    // MARK: - Statistics Monitoring
+    
+    private var statsTimer: Timer?
+    
+    private func startStatsMonitoring() {
+        statsTimer?.invalidate()
+        statsTimer = Timer.scheduledTimer(withTimeInterval: 2.0, repeats: true) { _ in
+            Task {
+                await self.updateConnectionStats()
+            }
+        }
+    }
+    
+    private func stopStatsMonitoring() {
+        statsTimer?.invalidate()
+        statsTimer = nil
+    }
+    
+    private func updateConnectionStats() async {
+        // Get stats from blocklist service
+        guard let url = URL(string: "http://localhost:8081/api/v1/stats") else { return }
+        
+        do {
+            let (data, response) = try await URLSession.shared.data(from: url)
+            
+            if let httpResponse = response as? HTTPURLResponse,
+               httpResponse.statusCode == 200,
+               let jsonResponse = try JSONSerialization.jsonObject(with: data) as? [String: Any] {
+                
+                let blocked = jsonResponse["blocked_queries"] as? Int ?? 0
+                let total = jsonResponse["total_queries"] as? Int ?? 0
+                
+                await MainActor.run {
+                    self.blockedCount = blocked
+                    self.totalCount = total
+                    self.lastStatsUpdate = Date()
+                }
+            }
+        } catch {
+            // Stats update failed, but don't show error to user
+            print("Failed to update stats: \(error)")
         }
     }
     

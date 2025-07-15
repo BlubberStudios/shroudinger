@@ -2,9 +2,6 @@ import SwiftUI
 
 struct ContentView: View {
     @StateObject private var settingsManager = SettingsManager()
-    @State private var isExtensionActive = false
-    @State private var blockedQueries = 0
-    @State private var totalQueries = 0
     @State private var showAdvancedSettings = false
     
     var body: some View {
@@ -15,7 +12,7 @@ struct ContentView: View {
                 HStack(spacing: 12) {
                     Image(systemName: "shield.fill")
                         .font(.system(size: 28, weight: .medium))
-                        .foregroundColor(isExtensionActive ? .green : .secondary)
+                        .foregroundColor(settingsManager.servicesRunning ? .green : .secondary)
                     
                     VStack(alignment: .leading, spacing: 2) {
                         Text("Shroudinger")
@@ -24,9 +21,9 @@ struct ContentView: View {
                         
                         HStack(spacing: 6) {
                             Circle()
-                                .fill(isExtensionActive ? .green : .red)
+                                .fill(settingsManager.servicesRunning ? .green : .red)
                                 .frame(width: 6, height: 6)
-                            Text(isExtensionActive ? "Active" : "Inactive")
+                            Text(settingsManager.servicesRunning ? "Services Running" : "Services Stopped")
                                 .font(.caption)
                                 .foregroundColor(.secondary)
                         }
@@ -35,9 +32,18 @@ struct ContentView: View {
                     Spacer()
                     
                     // Main toggle prominently placed
-                    Toggle("DNS Protection", isOn: $isExtensionActive)
+                    Toggle("DNS Protection", isOn: $settingsManager.servicesRunning)
                         .toggleStyle(.switch)
                         .labelsHidden()
+                        .onChange(of: settingsManager.servicesRunning) { newValue in
+                            Task {
+                                if newValue {
+                                    await settingsManager.startServices()
+                                } else {
+                                    await settingsManager.stopServices()
+                                }
+                            }
+                        }
                 }
                 .padding(.horizontal, 16)
                 .padding(.vertical, 12)
@@ -46,12 +52,12 @@ struct ContentView: View {
                 
                 // Statistics - Horizontal Layout
                 HStack(spacing: 12) {
-                    StatCardView(title: "Blocked", value: "\(blockedQueries)", color: .red)
-                    StatCardView(title: "Total", value: "\(totalQueries)", color: .blue)
-                    StatCardView(title: "Rate", value: "\((blockedQueries > 0 && totalQueries > 0) ? Int((Double(blockedQueries) / Double(totalQueries)) * 100) : 0)%", color: .orange)
+                    StatCardView(title: "Blocked", value: "\(settingsManager.blockedCount)", color: .red)
+                    StatCardView(title: "Total", value: "\(settingsManager.totalCount)", color: .blue)
+                    StatCardView(title: "Rate", value: "\((settingsManager.blockedCount > 0 && settingsManager.totalCount > 0) ? Int((Double(settingsManager.blockedCount) / Double(settingsManager.totalCount)) * 100) : 0)%", color: .orange)
                 }
                 
-                // Privacy Settings - Compact
+                // Privacy Settings - Placeholder
                 VStack(spacing: 8) {
                     HStack {
                         Label("Privacy Settings", systemImage: "gear")
@@ -59,18 +65,9 @@ struct ContentView: View {
                         Spacer()
                     }
                     
-                    VStack(spacing: 8) {
-                        ToggleRow(label: "Encrypted DNS", icon: "lock.shield", isOn: $settingsManager.encryptedDNSEnabled) {
-                            // BACKEND CALL: Update DNS encryption setting
-                            Task {
-                                await settingsManager.updateDNSConfiguration()
-                            }
-                        }
-                        
-                        ToggleRow(label: "Block Ads", icon: "eye.slash", isOn: $settingsManager.blockAdsEnabled)
-                        
-                        ToggleRow(label: "Block Trackers", icon: "hand.raised", isOn: $settingsManager.blockTrackersEnabled)
-                    }
+                    // Empty space where toggles were
+                    Spacer()
+                        .frame(height: 80)
                 }
                 .padding(12)
                 .background(Color(.controlBackgroundColor))
