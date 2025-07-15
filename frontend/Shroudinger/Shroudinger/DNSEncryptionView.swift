@@ -61,6 +61,9 @@ struct DNSEncryptionView: View {
                 settingsManager: settingsManager,
                 isPresented: $showingCustomConfiguration
             )
+            .onAppear {
+                print("🔧 CustomDNSConfigurationView appeared")
+            }
         }
         .sheet(isPresented: $showingExceptionDialog) {
             AddExceptionView(
@@ -202,6 +205,7 @@ struct DNSEncryptionView: View {
                 // Edit button for custom configuration
                 if settingsManager.selectedDNSProvider == .custom {
                     Button("Edit") {
+                        print("🔧 Edit button clicked - showing custom configuration")
                         showingCustomConfiguration = true
                     }
                     .buttonStyle(.bordered)
@@ -295,17 +299,29 @@ struct DNSEncryptionView: View {
                         HStack(spacing: 8) {
                             Image(systemName: "checkmark.circle.fill")
                                 .foregroundColor(.green)
-                            Text("The DNS lookups were successfully performed in encrypted form.")
-                                .font(.subheadline)
-                                .foregroundColor(.secondary)
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text("✅ Encrypted DNS is working correctly")
+                                    .font(.subheadline)
+                                    .fontWeight(.medium)
+                                    .foregroundColor(.green)
+                                Text("DNS queries are being resolved using \(settingsManager.selectedProtocol.rawValue) encryption")
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                            }
                         }
                     case .failure(let error):
                         HStack(spacing: 8) {
                             Image(systemName: "xmark.circle.fill")
                                 .foregroundColor(.red)
-                            Text("Test failed: \(error)")
-                                .font(.subheadline)
-                                .foregroundColor(.red)
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text("❌ DNS encryption test failed")
+                                    .font(.subheadline)
+                                    .fontWeight(.medium)
+                                    .foregroundColor(.red)
+                                Text(getDetailedErrorMessage(error))
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                            }
                         }
                     }
                     Spacer()
@@ -406,6 +422,16 @@ struct DNSEncryptionView: View {
         isTestingConnection = true
         testResult = nil
         
+        // Check if custom DNS configuration is complete
+        if settingsManager.selectedDNSProvider == .custom {
+            let config = settingsManager.getCurrentDNSConfig()
+            if config.host.isEmpty {
+                isTestingConnection = false
+                testResult = .failure("Custom DNS configuration is incomplete. Please edit the configuration first.")
+                return
+            }
+        }
+        
         Task {
             await settingsManager.testDNSConnection(testDomain: getTestDomain())
             
@@ -420,6 +446,22 @@ struct DNSEncryptionView: View {
                     }
                 }
             }
+        }
+    }
+    
+    private func getDetailedErrorMessage(_ error: String) -> String {
+        if error.contains("Invalid backend URL") {
+            return "Backend service is not running. Please start the DNS service first."
+        } else if error.contains("configuration is incomplete") {
+            return "Click 'Edit' to configure your custom DNS server settings."
+        } else if error.contains("Server returned error") {
+            return "DNS server configuration is incomplete or invalid. Please check your custom DNS settings."
+        } else if error.contains("connection failed") {
+            return "Unable to connect to the DNS server. Please check your network connection and server settings."
+        } else if error.contains("Invalid JSON") {
+            return "Communication error with backend service. Please restart the application."
+        } else {
+            return error
         }
     }
 }
