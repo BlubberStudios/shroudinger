@@ -19,6 +19,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strings"
 	"sync"
 	"syscall"
 	"time"
@@ -602,19 +603,35 @@ func performDoTTest(req DNSTestRequest) DNSTestResult {
 	// Test actual TLS connection to DNS server
 	address := fmt.Sprintf("%s:%d", req.Host, req.Port)
 	
-	// Test TLS connectivity (actual DoT requires TLS)
-	conn, err := tls.DialWithDialer(
-		&net.Dialer{Timeout: 3 * time.Second},
-		"tcp",
-		address,
-		&tls.Config{
-			ServerName: req.Host,
-			// For testing, we'll skip certificate verification
-			// In production, this should be configurable
-			InsecureSkipVerify: true,
-		},
-	)
-	if err != nil {
+	// Test TLS connectivity with retry for DNS resolution issues
+	var conn *tls.Conn
+	var err error
+	
+	// Retry up to 2 times for DNS resolution failures
+	for retry := 0; retry < 2; retry++ {
+		conn, err = tls.DialWithDialer(
+			&net.Dialer{Timeout: 5 * time.Second},
+			"tcp",
+			address,
+			&tls.Config{
+				ServerName: req.Host,
+				// For testing, we'll skip certificate verification
+				// In production, this should be configurable
+				InsecureSkipVerify: true,
+			},
+		)
+		if err == nil {
+			break // Success
+		}
+		
+		// Check if it's a DNS resolution error and retry
+		if retry < 1 && isDNSResolutionError(err) {
+			log.Printf("⚠️ DNS resolution failed for %s, retrying... (attempt %d/2)", req.Host, retry+1)
+			time.Sleep(500 * time.Millisecond) // Brief pause before retry
+			continue
+		}
+		
+		// Final failure
 		result.Error = fmt.Sprintf("DoT TLS connection failed: %v", err)
 		result.ResponseTime = time.Since(start)
 		return result
@@ -885,4 +902,17 @@ func handleDoHStatus(c *gin.Context) {
 
 func handleDoQStatus(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"status": "not_implemented"})
+}
+
+// isDNSResolutionError checks if the error is related to DNS resolution
+func isDNSResolutionError(err error) bool {
+	if err == nil {
+		return false
+	}
+	
+	errStr := err.Error()
+	return strings.Contains(errStr, "no such host") ||
+		   strings.Contains(errStr, "lookup") ||
+		   strings.Contains(errStr, "dns") ||
+		   strings.Contains(errStr, "name resolution")
 }
