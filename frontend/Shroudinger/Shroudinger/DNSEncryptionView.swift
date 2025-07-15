@@ -9,10 +9,24 @@ struct DNSEncryptionView: View {
     @State private var testResult: TestResult?
     @State private var isTestingConnection = false
     @State private var selectedTestDomain = "Random Domain"
+    @State private var activeSheet: ActiveSheet? = nil
+    @State private var showingAlert = false
     
     enum TestResult {
         case success
         case failure(String)
+    }
+    
+    enum ActiveSheet: Identifiable {
+        case customConfiguration
+        case exception
+        
+        var id: Int {
+            switch self {
+            case .customConfiguration: return 1
+            case .exception: return 2
+            }
+        }
     }
     
     // Predefined test domains
@@ -56,22 +70,35 @@ struct DNSEncryptionView: View {
             .padding(.horizontal, 24)
             .padding(.vertical, 32)
         }
-        .sheet(isPresented: $showingCustomConfiguration) {
-            CustomDNSConfigurationView(
-                settingsManager: settingsManager,
-                isPresented: $showingCustomConfiguration
-            )
-            .onAppear {
-                print("🔧 CustomDNSConfigurationView appeared")
+        .sheet(item: $activeSheet) { sheet in
+            switch sheet {
+            case .customConfiguration:
+                CustomDNSConfigurationView(
+                    settingsManager: settingsManager,
+                    isPresented: Binding(
+                        get: { activeSheet == .customConfiguration },
+                        set: { _ in activeSheet = nil }
+                    )
+                )
+                .onAppear {
+                    print("🔧 CustomDNSConfigurationView appeared")
+                }
+            case .exception:
+                AddExceptionView(
+                    domain: $newExceptionDomain,
+                    dnsServer: $newExceptionDNSServer,
+                    isPresented: Binding(
+                        get: { activeSheet == .exception },
+                        set: { _ in activeSheet = nil }
+                    ),
+                    settingsManager: settingsManager
+                )
             }
         }
-        .sheet(isPresented: $showingExceptionDialog) {
-            AddExceptionView(
-                domain: $newExceptionDomain,
-                dnsServer: $newExceptionDNSServer,
-                isPresented: $showingExceptionDialog,
-                settingsManager: settingsManager
-            )
+        .alert("Debug", isPresented: $showingAlert) {
+            Button("OK") { }
+        } message: {
+            Text("Edit button was clicked. Check console for sheet debug info.")
         }
     }
     
@@ -205,8 +232,10 @@ struct DNSEncryptionView: View {
                 // Edit button for custom configuration
                 if settingsManager.selectedDNSProvider == .custom {
                     Button("Edit") {
-                        print("🔧 Edit button clicked - showing custom configuration")
-                        showingCustomConfiguration = true
+                        print("🔧 Edit button clicked - activeSheet was: \(String(describing: activeSheet))")
+                        showingAlert = true
+                        activeSheet = .customConfiguration
+                        print("🔧 Edit button clicked - activeSheet is now: \(String(describing: activeSheet))")
                     }
                     .buttonStyle(.bordered)
                     .controlSize(.small)
@@ -342,7 +371,7 @@ struct DNSEncryptionView: View {
         VStack(spacing: 16) {
             HStack {
                 Button("Add Exception...") {
-                    showingExceptionDialog = true
+                    activeSheet = .exception
                 }
                 .buttonStyle(.bordered)
                 .controlSize(.regular)
