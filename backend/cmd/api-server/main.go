@@ -163,14 +163,32 @@ func main() {
 // This is the foundation of our privacy-first architecture
 func privacyMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		// Core privacy headers
-		c.Header("X-Privacy-Policy", "no-logging")
+		// Core privacy headers - comprehensive privacy policy declaration
+		c.Header("X-Privacy-Policy", "no-query-logging")
 		c.Header("X-No-User-Tracking", "true")
 		c.Header("X-No-Query-Logging", "true")
+		c.Header("X-No-Domain-Logging", "true")
 		c.Header("X-Data-Retention", "none")
+		c.Header("X-Analytics-Disabled", "true")
+		c.Header("X-Telemetry-Disabled", "true")
+		
+		// DNS privacy specific headers
+		c.Header("X-DNS-Privacy", "encrypted-only")
+		c.Header("X-DNS-Logging", "disabled")
+		c.Header("X-DNS-Caching", "anonymous")
+		
+		// User privacy protection headers
+		c.Header("X-IP-Logging", "disabled")
+		c.Header("X-User-Agent-Logging", "disabled")
+		c.Header("X-Session-Tracking", "disabled")
+		
+		// Data handling headers
+		c.Header("X-Data-Storage", "memory-only")
+		c.Header("X-Data-Persistence", "none")
+		c.Header("X-Data-Sharing", "none")
 		
 		// Remove identifying headers for privacy
-		c.Header("Server", "Shroudinger")
+		c.Header("Server", "Shroudinger-DNS-Privacy")
 		c.Header("X-Powered-By", "")
 		
 		c.Next()

@@ -19,7 +19,8 @@
       "Bash(chmod:*)",
       "Bash(./docs/testing/test_connection_button.sh:*)",
       "Bash(git add:*)",
-      "Bash(git commit:*)"
+      "Bash(git commit:*)",
+      "Bash(pkill:*)"
     ],
     "deny": []
   }
