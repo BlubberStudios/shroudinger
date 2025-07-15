@@ -26,7 +26,8 @@
       "Bash(open:*)",
       "Bash(kill:*)",
       "Bash(git rebase:*)",
-      "Bash(lsof:*)"
+      "Bash(lsof:*)",
+      "Bash(osascript:*)"
     ],
     "deny": []
   }

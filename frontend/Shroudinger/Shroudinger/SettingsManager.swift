@@ -1,6 +1,7 @@
 import Foundation
 import SwiftUI
 
+@MainActor
 class SettingsManager: ObservableObject {
     @Published var encryptedDNSEnabled: Bool = true
     @Published var blockAdsEnabled: Bool = true
@@ -235,6 +236,11 @@ class SettingsManager: ObservableObject {
     }
     
     init() {
+        // Initialize all properties with safe defaults
+        blockedCount = 0
+        totalCount = 0
+        lastStatsUpdate = Date()
+        
         loadSettings()
     }
     
@@ -338,24 +344,20 @@ class SettingsManager: ObservableObject {
     // MARK: - Backend Communication
     
     func testDNSConnection(testDomain: String = "google.com") async {
-        await MainActor.run {
-            isTestingConnection = true
-        }
+        isTestingConnection = true
         
         let config = getCurrentDNSConfig()
         
         // BACKEND CALL: Test DNS server connectivity
         // POST http://localhost:8082/api/v1/dns/test
         guard let url = URL(string: "http://localhost:8082/api/v1/dns/test") else {
-            await MainActor.run {
-                lastTestResult = DNSTestResult(
-                    success: false,
-                    error: "Invalid backend URL",
-                    dnsProtocol: selectedProtocol,
-                    server: config.host
-                )
-                isTestingConnection = false
-            }
+            lastTestResult = DNSTestResult(
+                success: false,
+                error: "Invalid backend URL",
+                dnsProtocol: selectedProtocol,
+                server: config.host
+            )
+            isTestingConnection = false
             return
         }
         
@@ -399,41 +401,35 @@ class SettingsManager: ObservableObject {
                         return responseTime
                     }()
                     
-                    await MainActor.run {
-                        let finalSuccess = testCompleted && testSuccess && encryption
-                        let finalError = finalSuccess ? nil : (errorMessage?.isEmpty == false ? errorMessage : "DNS test failed - check configuration")
-                        
-                        lastTestResult = DNSTestResult(
-                            success: finalSuccess,
-                            responseTime: actualResponseTime,
-                            error: finalError,
-                            dnsProtocol: selectedProtocol,
-                            server: config.host
-                        )
-                        isTestingConnection = false
-                    }
-                }
-            } else {
-                await MainActor.run {
+                    let finalSuccess = testCompleted && testSuccess && encryption
+                    let finalError = finalSuccess ? nil : (errorMessage?.isEmpty == false ? errorMessage : "DNS test failed - check configuration")
+                    
                     lastTestResult = DNSTestResult(
-                        success: false,
-                        error: "Server returned error",
+                        success: finalSuccess,
+                        responseTime: actualResponseTime,
+                        error: finalError,
                         dnsProtocol: selectedProtocol,
                         server: config.host
                     )
                     isTestingConnection = false
                 }
-            }
-        } catch {
-            await MainActor.run {
+            } else {
                 lastTestResult = DNSTestResult(
                     success: false,
-                    error: error.localizedDescription,
+                    error: "Server returned error",
                     dnsProtocol: selectedProtocol,
                     server: config.host
                 )
                 isTestingConnection = false
             }
+        } catch {
+            lastTestResult = DNSTestResult(
+                success: false,
+                error: error.localizedDescription,
+                dnsProtocol: selectedProtocol,
+                server: config.host
+            )
+            isTestingConnection = false
         }
     }
     
@@ -505,13 +501,11 @@ class SettingsManager: ObservableObject {
     // MARK: - Service Management
     
     func startServices() async {
-        await MainActor.run {
-            servicesRunning = true
-            apiServiceStatus = .starting
-            dnsServiceStatus = .starting
-            middlewareServiceStatus = .starting
-            blocklistServiceStatus = .starting
-        }
+        servicesRunning = true
+        apiServiceStatus = .starting
+        dnsServiceStatus = .starting
+        middlewareServiceStatus = .starting
+        blocklistServiceStatus = .starting
         
         // Start backend services using make dev
         let result = await executeCommand("make", args: ["dev"])
@@ -526,24 +520,20 @@ class SettingsManager: ObservableObject {
             // Start stats monitoring
             startStatsMonitoring()
         } else {
-            await MainActor.run {
-                servicesRunning = false
-                apiServiceStatus = .error(result.error ?? "Failed to start")
-                dnsServiceStatus = .error(result.error ?? "Failed to start")
-                middlewareServiceStatus = .error(result.error ?? "Failed to start")
-                blocklistServiceStatus = .error(result.error ?? "Failed to start")
-            }
+            servicesRunning = false
+            apiServiceStatus = .error(result.error ?? "Failed to start")
+            dnsServiceStatus = .error(result.error ?? "Failed to start")
+            middlewareServiceStatus = .error(result.error ?? "Failed to start")
+            blocklistServiceStatus = .error(result.error ?? "Failed to start")
         }
     }
     
     func stopServices() async {
-        await MainActor.run {
-            servicesRunning = false
-            apiServiceStatus = .stopped
-            dnsServiceStatus = .stopped
-            middlewareServiceStatus = .stopped
-            blocklistServiceStatus = .stopped
-        }
+        servicesRunning = false
+        apiServiceStatus = .stopped
+        dnsServiceStatus = .stopped
+        middlewareServiceStatus = .stopped
+        blocklistServiceStatus = .stopped
         
         // Stop backend services using make dev-stop
         let _ = await executeCommand("make", args: ["dev-stop"])
@@ -561,11 +551,9 @@ class SettingsManager: ObservableObject {
             ("Blocklist", "http://localhost:8081/health", \SettingsManager.blocklistServiceStatus)
         ]
         
-        for (name, urlString, statusKeyPath) in services {
+        for (_, urlString, statusKeyPath) in services {
             guard let url = URL(string: urlString) else {
-                await MainActor.run {
-                    self[keyPath: statusKeyPath] = .error("Invalid URL")
-                }
+                self[keyPath: statusKeyPath] = .error("Invalid URL")
                 continue
             }
             
@@ -573,18 +561,14 @@ class SettingsManager: ObservableObject {
                 let (_, response) = try await URLSession.shared.data(from: url)
                 
                 if let httpResponse = response as? HTTPURLResponse {
-                    await MainActor.run {
-                        if httpResponse.statusCode == 200 {
-                            self[keyPath: statusKeyPath] = .running
-                        } else {
-                            self[keyPath: statusKeyPath] = .error("HTTP \(httpResponse.statusCode)")
-                        }
+                    if httpResponse.statusCode == 200 {
+                        self[keyPath: statusKeyPath] = .running
+                    } else {
+                        self[keyPath: statusKeyPath] = .error("HTTP \(httpResponse.statusCode)")
                     }
                 }
             } catch {
-                await MainActor.run {
-                    self[keyPath: statusKeyPath] = .error(error.localizedDescription)
-                }
+                self[keyPath: statusKeyPath] = .error(error.localizedDescription)
             }
         }
     }
@@ -649,11 +633,10 @@ class SettingsManager: ObservableObject {
                 let blocked = jsonResponse["blocked_queries"] as? Int ?? 0
                 let total = jsonResponse["total_queries"] as? Int ?? 0
                 
-                await MainActor.run {
-                    self.blockedCount = blocked
-                    self.totalCount = total
-                    self.lastStatsUpdate = Date()
-                }
+                // Update properties - already on main thread due to @MainActor
+                self.blockedCount = blocked
+                self.totalCount = total
+                self.lastStatsUpdate = Date()
             }
         } catch {
             // Stats update failed, but don't show error to user

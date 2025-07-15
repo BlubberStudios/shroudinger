@@ -52,9 +52,9 @@ struct ContentView: View {
                 
                 // Statistics - Horizontal Layout
                 HStack(spacing: 12) {
-                    StatCardView(title: "Blocked", value: "\(settingsManager.blockedCount)", color: .red)
-                    StatCardView(title: "Total", value: "\(settingsManager.totalCount)", color: .blue)
-                    StatCardView(title: "Rate", value: "\((settingsManager.blockedCount > 0 && settingsManager.totalCount > 0) ? Int((Double(settingsManager.blockedCount) / Double(settingsManager.totalCount)) * 100) : 0)%", color: .orange)
+                    StatCardView(title: "Blocked", value: blockedValue, color: .red)
+                    StatCardView(title: "Total", value: totalValue, color: .blue)
+                    StatCardView(title: "Rate", value: rateValue, color: .orange)
                 }
                 
                 // Privacy Settings - Placeholder
@@ -124,6 +124,24 @@ struct ContentView: View {
         .frame(minWidth: showAdvancedSettings ? 680 : 300, maxWidth: showAdvancedSettings ? 1200 : 320, minHeight: 480, maxHeight: .infinity)
         .background(Color(.windowBackgroundColor))
     }
+    
+    private func calculateBlockRate() -> Int {
+        guard settingsManager.totalCount > 0 else { return 0 }
+        return Int((Double(settingsManager.blockedCount) / Double(settingsManager.totalCount)) * 100)
+    }
+    
+    // Safe computed properties for view display
+    private var blockedValue: String {
+        return "\(settingsManager.blockedCount)"
+    }
+    
+    private var totalValue: String {
+        return "\(settingsManager.totalCount)"
+    }
+    
+    private var rateValue: String {
+        return "\(calculateBlockRate())%"
+    }
 }
 
 // MARK: - Helper Components
@@ -135,11 +153,11 @@ struct StatCardView: View {
     
     var body: some View {
         VStack(spacing: 4) {
-            Text(value)
+            Text(safeValue)
                 .font(.title3)
                 .fontWeight(.semibold)
                 .foregroundColor(color)
-            Text(title)
+            Text(safeTitle)
                 .font(.caption2)
                 .foregroundColor(.secondary)
         }
@@ -147,6 +165,14 @@ struct StatCardView: View {
         .padding(.vertical, 8)
         .background(Color(.controlBackgroundColor))
         .cornerRadius(6)
+    }
+    
+    private var safeValue: String {
+        return value.isEmpty ? "0" : value
+    }
+    
+    private var safeTitle: String {
+        return title.isEmpty ? "Unknown" : title
     }
 }
 
