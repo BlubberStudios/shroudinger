@@ -353,14 +353,26 @@ class SettingsManager: ObservableObject {
                httpResponse.statusCode == 200 {
                 
                 if let jsonResponse = try JSONSerialization.jsonObject(with: data) as? [String: Any] {
-                    let success = jsonResponse["status"] as? String == "test_complete"
+                    let testCompleted = jsonResponse["status"] as? String == "test_complete"
+                    let testSuccess = jsonResponse["success"] as? Bool ?? false
                     let encryption = jsonResponse["encryption"] as? String == "verified"
+                    let errorMessage = jsonResponse["error"] as? String
+                    
+                    // Extract performance data
+                    var actualResponseTime = responseTime
+                    if let performance = jsonResponse["performance"] as? [String: Any],
+                       let dnsTimeString = performance["dns_resolution_time"] as? String {
+                        // Parse duration string like "87ms" or "1.885753833s"
+                        if let parsed = parseDurationString(dnsTimeString) {
+                            actualResponseTime = parsed
+                        }
+                    }
                     
                     await MainActor.run {
                         lastTestResult = DNSTestResult(
-                            success: success && encryption,
-                            responseTime: responseTime,
-                            error: success && encryption ? nil : "Encryption verification failed",
+                            success: testCompleted && testSuccess && encryption,
+                            responseTime: actualResponseTime,
+                            error: testSuccess && encryption ? nil : (errorMessage ?? "Test failed"),
                             dnsProtocol: selectedProtocol,
                             server: config.host
                         )
@@ -454,5 +466,26 @@ class SettingsManager: ObservableObject {
                 dnsExceptions = exceptions
             }
         }
+    }
+    
+    // Helper function to parse duration strings from backend
+    private func parseDurationString(_ durationString: String) -> TimeInterval? {
+        let cleanString = durationString.trimmingCharacters(in: .whitespacesAndNewlines)
+        
+        if cleanString.hasSuffix("ms") {
+            if let value = Double(String(cleanString.dropLast(2))) {
+                return value / 1000.0 // Convert milliseconds to seconds
+            }
+        } else if cleanString.hasSuffix("s") {
+            if let value = Double(String(cleanString.dropLast(1))) {
+                return value
+            }
+        } else if cleanString.hasSuffix("µs") {
+            if let value = Double(String(cleanString.dropLast(2))) {
+                return value / 1_000_000.0 // Convert microseconds to seconds
+            }
+        }
+        
+        return nil
     }
 }
