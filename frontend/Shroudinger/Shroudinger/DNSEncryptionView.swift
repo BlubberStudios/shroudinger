@@ -43,10 +43,10 @@ struct DNSEncryptionView: View {
     var body: some View {
         ZStack {
             // Main background
-            Color(.windowBackgroundColor)
+            DesignSystem.Colors.backgroundPrimary
                 .ignoresSafeArea()
             
-            VStack(spacing: 24) {
+            VStack(spacing: DesignSystem.Spacing.lg) {
                 // DNS Encryption Toggle Section
                 dnsEncryptionToggleSection
                 
@@ -66,8 +66,8 @@ struct DNSEncryptionView: View {
                 
                 Spacer()
             }
-            .padding(.horizontal, 24)
-            .padding(.vertical, 32)
+            .padding(.horizontal, DesignSystem.Spacing.lg)
+            .padding(.vertical, DesignSystem.Spacing.xl)
         }
         .sheet(isPresented: Binding(
             get: { activeSheet == .customConfiguration },
@@ -110,39 +110,24 @@ struct DNSEncryptionView: View {
     
     // MARK: - DNS Encryption Toggle Section
     private var dnsEncryptionToggleSection: some View {
-        VStack(spacing: 16) {
-            HStack {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("DNS Encryption:")
-                        .font(.title2)
-                        .fontWeight(.medium)
-                        .foregroundColor(.primary)
-                    
-                    Text("DNS lookups are performed in encrypted form.")
-                        .font(.subheadline)
-                        .foregroundColor(.secondary)
+        ModernToggle(
+            "DNS Encryption",
+            description: "DNS lookups are performed in encrypted form.",
+            isOn: $settingsManager.encryptedDNSEnabled,
+            onChange: {
+                Task {
+                    await settingsManager.updateDNSConfiguration()
                 }
-                
-                Spacer()
-                
-                // Main DNS Encryption Toggle
-                Toggle("", isOn: $settingsManager.encryptedDNSEnabled)
-                    .toggleStyle(CustomToggleStyle())
-                    .onChange(of: settingsManager.encryptedDNSEnabled) { _ in
-                        Task {
-                            await settingsManager.updateDNSConfiguration()
-                        }
-                    }
             }
-        }
-        .padding(.horizontal, 20)
-        .padding(.vertical, 16)
+        )
     }
     
     // MARK: - DNS Provider Section
     private var dnsProviderSection: some View {
-        VStack(spacing: 16) {
-            HStack {
+        ModernCard {
+            VStack(spacing: DesignSystem.Spacing.md) {
+                SectionHeader("DNS Provider", subtitle: "Select your preferred DNS service")
+                
                 // DNS Provider Dropdown
                 Menu {
                     ForEach(SettingsManager.DNSProvider.allCases.filter { $0 != .custom }) { provider in
@@ -157,7 +142,7 @@ struct DNSEncryptionView: View {
                                 if settingsManager.selectedDNSProvider == provider {
                                     Spacer()
                                     Image(systemName: "checkmark")
-                                        .foregroundColor(.blue)
+                                        .foregroundColor(DesignSystem.Colors.primary)
                                 }
                             }
                         }
@@ -174,26 +159,26 @@ struct DNSEncryptionView: View {
                             if settingsManager.selectedDNSProvider == .custom {
                                 Spacer()
                                 Image(systemName: "checkmark")
-                                    .foregroundColor(.blue)
+                                    .foregroundColor(DesignSystem.Colors.primary)
                             }
                         }
                     }
                 } label: {
                     HStack {
                         Text(settingsManager.selectedDNSProvider.displayName)
-                            .foregroundColor(.primary)
-                            .font(.system(size: 14, weight: .medium))
+                            .foregroundColor(DesignSystem.Colors.textPrimary)
+                            .font(DesignSystem.Typography.bodyMedium)
                         
                         Spacer()
                         
                         Image(systemName: "chevron.up.chevron.down")
-                            .font(.system(size: 12))
-                            .foregroundColor(.blue)
+                            .font(DesignSystem.Typography.caption)
+                            .foregroundColor(DesignSystem.Colors.primary)
                     }
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 8)
-                    .background(Color(.controlBackgroundColor))
-                    .cornerRadius(6)
+                    .padding(.horizontal, DesignSystem.Spacing.sm)
+                    .padding(.vertical, DesignSystem.Spacing.xs)
+                    .background(DesignSystem.Colors.backgroundTertiary)
+                    .cornerRadius(DesignSystem.CornerRadius.small)
                 }
                 .buttonStyle(PlainButtonStyle())
                 

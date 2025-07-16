@@ -252,6 +252,105 @@ struct Shadow {
     let y: CGFloat
 }
 
+// Modern Text Field Component
+struct ModernTextField: View {
+    let title: String
+    let placeholder: String
+    @Binding var text: String
+    var description: String?
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: DesignSystem.Spacing.xxs) {
+            Text(title)
+                .font(DesignSystem.Typography.captionMedium)
+                .foregroundColor(DesignSystem.Colors.textPrimary)
+            
+            TextField(placeholder, text: $text)
+                .textFieldStyle(.roundedBorder)
+                .font(DesignSystem.Typography.body)
+            
+            if let description = description {
+                Text(description)
+                    .font(DesignSystem.Typography.caption)
+                    .foregroundColor(DesignSystem.Colors.textSecondary)
+            }
+        }
+    }
+}
+
+// Modern Section Header Component
+struct SectionHeader: View {
+    let title: String
+    let subtitle: String?
+    
+    init(_ title: String, subtitle: String? = nil) {
+        self.title = title
+        self.subtitle = subtitle
+    }
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: DesignSystem.Spacing.xxs) {
+            Text(title)
+                .font(DesignSystem.Typography.headline)
+                .foregroundColor(DesignSystem.Colors.textPrimary)
+            
+            if let subtitle = subtitle {
+                Text(subtitle)
+                    .font(DesignSystem.Typography.body)
+                    .foregroundColor(DesignSystem.Colors.textSecondary)
+            }
+        }
+    }
+}
+
+// Enhanced Toggle Component
+struct ModernToggle: View {
+    let title: String
+    let description: String?
+    @Binding var isOn: Bool
+    let onChange: (() -> Void)?
+    
+    init(
+        _ title: String,
+        description: String? = nil,
+        isOn: Binding<Bool>,
+        onChange: (() -> Void)? = nil
+    ) {
+        self.title = title
+        self.description = description
+        self._isOn = isOn
+        self.onChange = onChange
+    }
+    
+    var body: some View {
+        ModernCard {
+            VStack(alignment: .leading, spacing: DesignSystem.Spacing.xs) {
+                HStack {
+                    VStack(alignment: .leading, spacing: DesignSystem.Spacing.xxs) {
+                        Text(title)
+                            .font(DesignSystem.Typography.bodyMedium)
+                            .foregroundColor(DesignSystem.Colors.textPrimary)
+                        
+                        if let description = description {
+                            Text(description)
+                                .font(DesignSystem.Typography.caption)
+                                .foregroundColor(DesignSystem.Colors.textSecondary)
+                        }
+                    }
+                    
+                    Spacer()
+                    
+                    Toggle("", isOn: $isOn)
+                        .toggleStyle(.switch)
+                        .onChange(of: isOn) { _ in
+                            onChange?()
+                        }
+                }
+            }
+        }
+    }
+}
+
 // View Extension for easier spacing
 extension View {
     func spacing(_ spacing: CGFloat) -> some View {

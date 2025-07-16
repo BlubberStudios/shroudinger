@@ -4,97 +4,92 @@ struct MenuBarView: View {
     @EnvironmentObject var settingsManager: SettingsManager
     
     var body: some View {
-        VStack(spacing: 12) {
+        VStack(spacing: DesignSystem.Spacing.sm) {
             // Header
-            HStack {
-                Image(systemName: "shield.fill")
-                    .font(.title2)
-                    .foregroundColor(settingsManager.servicesRunning ? .green : .secondary)
-                
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("Shroudinger")
-                        .font(.headline)
-                        .fontWeight(.medium)
+            ModernCard(shadow: DesignSystem.Shadows.subtle) {
+                HStack(spacing: DesignSystem.Spacing.sm) {
+                    Image(systemName: "shield.fill")
+                        .font(.title2)
+                        .foregroundColor(settingsManager.servicesRunning ? DesignSystem.Colors.success : DesignSystem.Colors.textSecondary)
                     
-                    HStack(spacing: 6) {
-                        Circle()
-                            .fill(settingsManager.servicesRunning ? .green : .red)
-                            .frame(width: 6, height: 6)
-                        Text(settingsManager.servicesRunning ? "Active" : "Inactive")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
+                    VStack(alignment: .leading, spacing: DesignSystem.Spacing.xxs) {
+                        Text("Shroudinger")
+                            .font(DesignSystem.Typography.headline)
+                            .foregroundColor(DesignSystem.Colors.textPrimary)
+                        
+                        StatusIndicator(status: settingsManager.servicesRunning ? .connected : .disconnected)
                     }
+                    
+                    Spacer()
                 }
-                
-                Spacer()
             }
-            .padding(.horizontal, 16)
-            .padding(.top, 12)
             
             Divider()
             
             // Quick Stats
             if settingsManager.servicesRunning {
-                VStack(spacing: 8) {
-                    HStack {
-                        Text("Quick Stats")
-                            .font(.subheadline)
-                            .fontWeight(.medium)
-                        Spacer()
-                    }
-                    
-                    HStack(spacing: 16) {
-                        StatItem(title: "Blocked", value: "\(settingsManager.blockedCount)", color: .red)
-                        StatItem(title: "Total", value: "\(settingsManager.totalCount)", color: .blue)
-                        StatItem(title: "Rate", value: "\(calculateBlockRate())%", color: .orange)
+                ModernCard {
+                    VStack(spacing: DesignSystem.Spacing.xs) {
+                        HStack {
+                            Text("Quick Stats")
+                                .font(DesignSystem.Typography.title)
+                                .foregroundColor(DesignSystem.Colors.textPrimary)
+                            Spacer()
+                        }
+                        
+                        HStack(spacing: DesignSystem.Spacing.md) {
+                            StatItem(title: "Blocked", value: "\(settingsManager.blockedCount)", color: DesignSystem.Colors.error)
+                            StatItem(title: "Total", value: "\(settingsManager.totalCount)", color: DesignSystem.Colors.info)
+                            StatItem(title: "Rate", value: "\(calculateBlockRate())%", color: DesignSystem.Colors.warning)
+                        }
                     }
                 }
-                .padding(.horizontal, 16)
             }
             
             Divider()
             
             // Toggle Control
-            HStack {
-                Text("DNS Protection")
-                    .font(.subheadline)
-                Spacer()
-                Toggle("", isOn: $settingsManager.servicesRunning)
-                    .toggleStyle(.switch)
-                    .onChange(of: settingsManager.servicesRunning) { newValue in
-                        Task {
-                            if newValue {
-                                await settingsManager.startServices()
-                            } else {
-                                await settingsManager.stopServices()
+            ModernCard {
+                HStack {
+                    Text("DNS Protection")
+                        .font(DesignSystem.Typography.body)
+                        .foregroundColor(DesignSystem.Colors.textPrimary)
+                    Spacer()
+                    Toggle("", isOn: $settingsManager.servicesRunning)
+                        .toggleStyle(.switch)
+                        .onChange(of: settingsManager.servicesRunning) { newValue in
+                            Task {
+                                if newValue {
+                                    await settingsManager.startServices()
+                                } else {
+                                    await settingsManager.stopServices()
+                                }
                             }
                         }
-                    }
+                }
             }
-            .padding(.horizontal, 16)
             
             Divider()
             
             // Quick Actions
-            VStack(spacing: 8) {
+            VStack(spacing: DesignSystem.Spacing.xs) {
                 Button("Open Settings") {
                     // Show main window
                     NSApp.activate(ignoringOtherApps: true)
                 }
-                .buttonStyle(.borderless)
-                .foregroundColor(.blue)
+                .buttonStyle(SecondaryButtonStyle())
                 
                 Button("Quit Shroudinger") {
                     NSApp.terminate(nil)
                 }
                 .buttonStyle(.borderless)
-                .foregroundColor(.red)
+                .foregroundColor(DesignSystem.Colors.error)
+                .font(DesignSystem.Typography.body)
             }
-            .padding(.horizontal, 16)
-            .padding(.bottom, 12)
         }
         .frame(width: 280)
-        .background(Color(.controlBackgroundColor))
+        .padding(DesignSystem.Spacing.sm)
+        .background(DesignSystem.Colors.backgroundPrimary)
     }
     
     private func calculateBlockRate() -> Int {
@@ -109,14 +104,13 @@ struct StatItem: View {
     let color: Color
     
     var body: some View {
-        VStack(spacing: 2) {
+        VStack(spacing: DesignSystem.Spacing.xxs) {
             Text(value)
-                .font(.caption)
-                .fontWeight(.semibold)
+                .font(DesignSystem.Typography.bodyMedium)
                 .foregroundColor(color)
             Text(title)
-                .font(.caption2)
-                .foregroundColor(.secondary)
+                .font(DesignSystem.Typography.caption)
+                .foregroundColor(DesignSystem.Colors.textSecondary)
         }
         .frame(maxWidth: .infinity)
     }
