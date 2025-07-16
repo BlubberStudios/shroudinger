@@ -241,14 +241,36 @@ class SettingsManager: ObservableObject {
         totalCount = 0
         lastStatsUpdate = Date()
         
-        loadSettings()
+        // Only load basic settings, skip service checks for now
+        loadBasicSettings()
         
-        // Check service status on startup (async)
-        checkInitialServiceStatus()
+        // Defer service checks to avoid blocking initialization
+        // checkInitialServiceStatus()
+    }
+    
+    private func loadBasicSettings() {
+        // Load only essential settings without complex operations
+        if let providerRaw = userDefaults.string(forKey: "selectedDNSProvider"),
+           let provider = DNSProvider(rawValue: providerRaw) {
+            selectedDNSProvider = provider
+        }
+        
+        if let protocolRaw = userDefaults.string(forKey: "selectedProtocol"),
+           let dnsProtocol = DNSProtocol(rawValue: protocolRaw) {
+            selectedProtocol = dnsProtocol
+        }
+        
+        // Set safe defaults for booleans
+        encryptedDNSEnabled = userDefaults.object(forKey: "encryptedDNSEnabled") as? Bool ?? true
+        blockAdsEnabled = userDefaults.object(forKey: "blockAdsEnabled") as? Bool ?? true
+        blockTrackersEnabled = userDefaults.object(forKey: "blockTrackersEnabled") as? Bool ?? true
+        blockMalwareEnabled = userDefaults.object(forKey: "blockMalwareEnabled") as? Bool ?? true
     }
     
     private func checkInitialServiceStatus() {
+        // Delay the service check to avoid blocking app startup
         Task {
+            try? await Task.sleep(nanoseconds: 1_000_000_000) // 1 second delay
             await checkServiceHealth()
             let allServicesRunning = apiServiceStatus == .running && 
                                     dnsServiceStatus == .running && 
@@ -602,7 +624,10 @@ class SettingsManager: ObservableObject {
             }
             
             do {
-                let (_, response) = try await URLSession.shared.data(from: url)
+                var request = URLRequest(url: url)
+                request.timeoutInterval = 2.0 // 2 second timeout
+                
+                let (_, response) = try await URLSession.shared.data(for: request)
                 
                 if let httpResponse = response as? HTTPURLResponse {
                     if httpResponse.statusCode == 200 {

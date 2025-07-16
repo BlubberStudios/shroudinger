@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct ContentView: View {
-    @StateObject private var settingsManager = SettingsManager()
+    @EnvironmentObject var settingsManager: SettingsManager
     @State private var showAdvancedSettings = false
     @State private var selectedSection: SidebarSection? = .overview
     
@@ -37,34 +37,38 @@ struct ContentView: View {
         VStack(spacing: DesignSystem.Spacing.lg) {
             // Header with compact status
             ModernCard(isInteractive: true) {
-                HStack(spacing: DesignSystem.Spacing.sm) {
-                    Image(systemName: "shield.fill")
-                        .font(.title2)
-                        .foregroundColor(settingsManager.servicesRunning ? DesignSystem.Colors.success : DesignSystem.Colors.textSecondary)
-                    
-                    VStack(alignment: .leading, spacing: DesignSystem.Spacing.xxs) {
+                VStack(spacing: DesignSystem.Spacing.sm) {
+                    HStack(spacing: DesignSystem.Spacing.sm) {
+                        Image(systemName: "shield.fill")
+                            .font(.title2)
+                            .foregroundColor(settingsManager.servicesRunning ? DesignSystem.Colors.success : DesignSystem.Colors.textSecondary)
+                        
                         Text("Shroudinger")
                             .font(DesignSystem.Typography.title)
                             .foregroundColor(DesignSystem.Colors.textPrimary)
-                            .fixedSize(horizontal: true, vertical: false)
+                            .fixedSize()
                         
-                        StatusIndicator(status: settingsManager.servicesRunning ? .connected : .disconnected)
-                    }
-                    
-                    Spacer()
-                    
-                    // Main toggle prominently placed
-                    Toggle("DNS Protection", isOn: $settingsManager.servicesRunning)
-                        .toggleStyle(.switch)
-                        .onChange(of: settingsManager.servicesRunning) { newValue in
-                            Task {
-                                if newValue {
-                                    await settingsManager.startServices()
-                                } else {
-                                    await settingsManager.stopServices()
+                        Spacer()
+                        
+                        // Main toggle prominently placed
+                        Toggle("DNS Protection", isOn: $settingsManager.servicesRunning)
+                            .toggleStyle(.switch)
+                            .labelsHidden()
+                            .onChange(of: settingsManager.servicesRunning) { newValue in
+                                Task {
+                                    if newValue {
+                                        await settingsManager.startServices()
+                                    } else {
+                                        await settingsManager.stopServices()
+                                    }
                                 }
                             }
-                        }
+                    }
+                    
+                    HStack {
+                        StatusIndicator(status: settingsManager.servicesRunning ? .connected : .disconnected)
+                        Spacer()
+                    }
                 }
             }
             
@@ -777,6 +781,7 @@ struct FeatureRow: View {
 struct ContentView_Previews: PreviewProvider {
     static var previews: some View {
         ContentView()
+            .environmentObject(SettingsManager())
             .frame(width: 800, height: 600)
     }
 }

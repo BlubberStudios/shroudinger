@@ -6,10 +6,11 @@ struct ShroudingerAppApp: App {
     
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            ContentView_Safe()
+                .environmentObject(settingsManager)
         }
         .windowResizability(.contentSize)
-        .defaultSize(width: 400, height: 500)
+        .defaultSize(width: 800, height: 500)
         .commands {
             CommandGroup(replacing: .appInfo) {
                 Button("About Shroudinger") {
