@@ -3,8 +3,299 @@ import SwiftUI
 struct ContentView: View {
     @StateObject private var settingsManager = SettingsManager()
     @State private var showAdvancedSettings = false
+    @State private var selectedSection: SidebarSection? = .overview
+    
+    enum SidebarSection: String, CaseIterable, Identifiable {
+        case overview = "Overview"
+        case dnsSettings = "DNS Settings"
+        case logs = "Activity Logs"
+        
+        var id: String { rawValue }
+        
+        var icon: String {
+            switch self {
+            case .overview: return "shield.fill"
+            case .dnsSettings: return "network"
+            case .logs: return "list.bullet.rectangle"
+            }
+        }
+    }
     
     var body: some View {
+        NavigationSplitView {
+            // Sidebar
+            sidebarView
+        } detail: {
+            // Detail View
+            detailView
+        }
+        .navigationSplitViewStyle(.automatic)
+        .background(DesignSystem.Colors.backgroundPrimary)
+    }
+    
+    private var sidebarView: some View {
+        VStack(spacing: DesignSystem.Spacing.lg) {
+            // Header with compact status
+            ModernCard(isInteractive: true) {
+                HStack(spacing: DesignSystem.Spacing.sm) {
+                    Image(systemName: "shield.fill")
+                        .font(.title2)
+                        .foregroundColor(settingsManager.servicesRunning ? DesignSystem.Colors.success : DesignSystem.Colors.textSecondary)
+                    
+                    VStack(alignment: .leading, spacing: DesignSystem.Spacing.xxs) {
+                        Text("Shroudinger")
+                            .font(DesignSystem.Typography.title)
+                            .foregroundColor(DesignSystem.Colors.textPrimary)
+                            .fixedSize(horizontal: true, vertical: false)
+                        
+                        StatusIndicator(status: settingsManager.servicesRunning ? .connected : .disconnected)
+                    }
+                    
+                    Spacer()
+                    
+                    // Main toggle prominently placed
+                    Toggle("DNS Protection", isOn: $settingsManager.servicesRunning)
+                        .toggleStyle(.switch)
+                        .onChange(of: settingsManager.servicesRunning) { newValue in
+                            Task {
+                                if newValue {
+                                    await settingsManager.startServices()
+                                } else {
+                                    await settingsManager.stopServices()
+                                }
+                            }
+                        }
+                }
+            }
+            
+            // Navigation List
+            VStack(spacing: DesignSystem.Spacing.xs) {
+                ForEach(SidebarSection.allCases) { section in
+                    NavigationLink(value: section) {
+                        HStack(spacing: DesignSystem.Spacing.sm) {
+                            Image(systemName: section.icon)
+                                .font(DesignSystem.Typography.body)
+                                .foregroundColor(selectedSection == section ? DesignSystem.Colors.primary : DesignSystem.Colors.textSecondary)
+                                .frame(width: 20)
+                            
+                            Text(section.rawValue)
+                                .font(DesignSystem.Typography.bodyMedium)
+                                .foregroundColor(selectedSection == section ? DesignSystem.Colors.primary : DesignSystem.Colors.textPrimary)
+                            
+                            Spacer()
+                        }
+                        .padding(DesignSystem.Spacing.sm)
+                        .background(
+                            RoundedRectangle(cornerRadius: DesignSystem.CornerRadius.small)
+                                .fill(selectedSection == section ? DesignSystem.Colors.primary.opacity(0.1) : Color.clear)
+                        )
+                        .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            
+            Spacer()
+            
+            // Quick Stats if running
+            if settingsManager.servicesRunning {
+                ModernCard {
+                    VStack(spacing: DesignSystem.Spacing.xs) {
+                        HStack {
+                            Text("Quick Stats")
+                                .font(DesignSystem.Typography.title)
+                                .foregroundColor(DesignSystem.Colors.textPrimary)
+                            Spacer()
+                        }
+                        
+                        HStack(spacing: DesignSystem.Spacing.sm) {
+                            StatCardView(title: "Blocked", value: blockedValue, color: DesignSystem.Colors.error)
+                            StatCardView(title: "Total", value: totalValue, color: DesignSystem.Colors.info)
+                            StatCardView(title: "Rate", value: rateValue, color: DesignSystem.Colors.warning)
+                        }
+                    }
+                }
+            }
+        }
+        .navigationDestination(for: SidebarSection.self) { section in
+            EmptyView()
+                .onAppear {
+                    selectedSection = section
+                }
+        }
+        .padding(DesignSystem.Spacing.layoutPadding)
+        .frame(minWidth: 280, idealWidth: 320, maxWidth: 400)
+    }
+    
+    private var detailView: some View {
+        Group {
+            switch selectedSection {
+            case .overview:
+                overviewView
+            case .dnsSettings:
+                DNSEncryptionView()
+            case .logs:
+                activityLogsView
+            case .none:
+                overviewView
+            }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(DesignSystem.Colors.backgroundPrimary)
+        .contentShape(Rectangle())
+    }
+    
+    private var overviewView: some View {
+        ScrollView {
+            VStack(spacing: DesignSystem.Spacing.lg) {
+                // System Status
+                ModernCard {
+                    VStack(spacing: DesignSystem.Spacing.md) {
+                        HStack {
+                            Label("System Status", systemImage: "shield.fill")
+                                .font(DesignSystem.Typography.headline)
+                                .foregroundColor(DesignSystem.Colors.textPrimary)
+                            Spacer()
+                        }
+                        
+                        HStack {
+                            StatusIndicator(status: settingsManager.servicesRunning ? .connected : .disconnected)
+                            VStack(alignment: .leading, spacing: DesignSystem.Spacing.xxs) {
+                                Text(settingsManager.servicesRunning ? "DNS Protection Active" : "DNS Protection Inactive")
+                                    .font(DesignSystem.Typography.bodyMedium)
+                                    .foregroundColor(DesignSystem.Colors.textPrimary)
+                                Text(settingsManager.servicesRunning ? "Your DNS queries are encrypted and filtered" : "Click the toggle to enable protection")
+                                    .font(DesignSystem.Typography.caption)
+                                    .foregroundColor(DesignSystem.Colors.textSecondary)
+                            }
+                            Spacer()
+                        }
+                    }
+                }
+                
+                // Quick Stats if running
+                if settingsManager.servicesRunning {
+                    ModernCard {
+                        VStack(spacing: DesignSystem.Spacing.md) {
+                            HStack {
+                                Label("Protection Statistics", systemImage: "chart.bar.fill")
+                                    .font(DesignSystem.Typography.headline)
+                                    .foregroundColor(DesignSystem.Colors.textPrimary)
+                                Spacer()
+                            }
+                            
+                            HStack(spacing: DesignSystem.Spacing.md) {
+                                StatCardView(title: "Blocked", value: blockedValue, color: DesignSystem.Colors.error)
+                                StatCardView(title: "Total", value: totalValue, color: DesignSystem.Colors.info)
+                                StatCardView(title: "Block Rate", value: rateValue, color: DesignSystem.Colors.success)
+                            }
+                        }
+                    }
+                }
+                
+                // Privacy Information
+                ModernCard {
+                    VStack(spacing: DesignSystem.Spacing.md) {
+                        HStack {
+                            Label("Privacy Features", systemImage: "eye.slash.fill")
+                                .font(DesignSystem.Typography.headline)
+                                .foregroundColor(DesignSystem.Colors.textPrimary)
+                            Spacer()
+                        }
+                        
+                        VStack(spacing: DesignSystem.Spacing.sm) {
+                            FeatureRow(icon: "lock.shield", title: "DNS Encryption", description: "All DNS queries are encrypted using DoT/DoH/DoQ")
+                            FeatureRow(icon: "eye.slash", title: "No Logging", description: "DNS queries are processed in-memory only")
+                            FeatureRow(icon: "shield.checkered", title: "Ad Blocking", description: "Malicious and advertising domains are blocked")
+                            FeatureRow(icon: "speedometer", title: "High Performance", description: "Sub-millisecond response times with smart caching")
+                        }
+                    }
+                }
+            }
+        }
+        .padding(DesignSystem.Spacing.sectionMargin)
+        .navigationTitle("Overview")
+    }
+    
+    private var activityLogsView: some View {
+        ScrollView {
+            VStack(spacing: DesignSystem.Spacing.lg) {
+                // Privacy Notice
+                ModernCard {
+                    VStack(spacing: DesignSystem.Spacing.md) {
+                        HStack {
+                            Label("Privacy Notice", systemImage: "eye.slash.fill")
+                                .font(DesignSystem.Typography.headline)
+                                .foregroundColor(DesignSystem.Colors.primary)
+                            Spacer()
+                        }
+                        
+                        VStack(spacing: DesignSystem.Spacing.sm) {
+                            HStack {
+                                Image(systemName: "shield.checkered")
+                                    .foregroundColor(DesignSystem.Colors.success)
+                                    .font(DesignSystem.Typography.title)
+                                
+                                VStack(alignment: .leading, spacing: DesignSystem.Spacing.xxs) {
+                                    Text("Activity Logging is Disabled")
+                                        .font(DesignSystem.Typography.bodyMedium)
+                                        .foregroundColor(DesignSystem.Colors.textPrimary)
+                                    Text("DNS queries are processed in-memory only and never logged to disk for maximum privacy protection.")
+                                        .font(DesignSystem.Typography.caption)
+                                        .foregroundColor(DesignSystem.Colors.textSecondary)
+                                        .multilineTextAlignment(.leading)
+                                }
+                                Spacer()
+                            }
+                        }
+                    }
+                }
+                
+                // What We Track
+                ModernCard {
+                    VStack(spacing: DesignSystem.Spacing.md) {
+                        HStack {
+                            Label("What We Track", systemImage: "chart.line.uptrend.xyaxis")
+                                .font(DesignSystem.Typography.headline)
+                                .foregroundColor(DesignSystem.Colors.textPrimary)
+                            Spacer()
+                        }
+                        
+                        VStack(spacing: DesignSystem.Spacing.sm) {
+                            FeatureRow(icon: "number.circle", title: "Query Counts", description: "Total number of DNS queries (not the domains)")
+                            FeatureRow(icon: "shield.lefthalf.filled", title: "Block Statistics", description: "Number of blocked queries for threat analysis")
+                            FeatureRow(icon: "clock", title: "Response Times", description: "DNS resolution performance metrics")
+                            FeatureRow(icon: "checkmark.shield", title: "Service Status", description: "Whether protection services are running")
+                        }
+                    }
+                }
+                
+                // What We Don't Track
+                ModernCard {
+                    VStack(spacing: DesignSystem.Spacing.md) {
+                        HStack {
+                            Label("What We Don't Track", systemImage: "eye.slash")
+                                .font(DesignSystem.Typography.headline)
+                                .foregroundColor(DesignSystem.Colors.error)
+                            Spacer()
+                        }
+                        
+                        VStack(spacing: DesignSystem.Spacing.sm) {
+                            FeatureRow(icon: "globe.slash", title: "Domain Names", description: "We never log which domains you visit")
+                            FeatureRow(icon: "person.slash", title: "Personal Data", description: "No IP addresses, timestamps, or user tracking")
+                            FeatureRow(icon: "externaldrive.badge.xmark", title: "Persistent Storage", description: "No DNS data is ever written to disk")
+                            FeatureRow(icon: "antenna.radiowaves.left.and.right.slash", title: "Analytics", description: "No telemetry or usage analytics collected")
+                        }
+                    }
+                }
+            }
+        }
+        .padding(DesignSystem.Spacing.sectionMargin)
+        .navigationTitle("Activity Logs")
+    }
+    
+    // Legacy layout method (keeping for reference)
+    private var legacyLayoutView: some View {
         HStack(spacing: 0) {
             // Left Panel - Main Controls
             VStack(spacing: DesignSystem.Spacing.lg) {
@@ -110,7 +401,14 @@ struct ContentView: View {
                 .transition(.move(edge: .trailing))
             }
         }
-        .frame(minWidth: showAdvancedSettings ? 680 : 300, maxWidth: showAdvancedSettings ? 1200 : 320, minHeight: 480, maxHeight: .infinity)
+        .frame(
+            minWidth: showAdvancedSettings ? 680 : 300, 
+            idealWidth: showAdvancedSettings ? 900 : 360,
+            maxWidth: showAdvancedSettings ? 1400 : 400, 
+            minHeight: 480, 
+            idealHeight: 600,
+            maxHeight: .infinity
+        )
         .background(DesignSystem.Colors.backgroundPrimary)
     }
     
@@ -445,6 +743,33 @@ struct CompactDNSServerView: View {
                     .foregroundColor(.red)
                     .multilineTextAlignment(.leading)
             }
+        }
+    }
+}
+
+struct FeatureRow: View {
+    let icon: String
+    let title: String
+    let description: String
+    
+    var body: some View {
+        HStack(spacing: DesignSystem.Spacing.sm) {
+            Image(systemName: icon)
+                .font(DesignSystem.Typography.body)
+                .foregroundColor(DesignSystem.Colors.primary)
+                .frame(width: 20)
+            
+            VStack(alignment: .leading, spacing: DesignSystem.Spacing.xxs) {
+                Text(title)
+                    .font(DesignSystem.Typography.bodyMedium)
+                    .foregroundColor(DesignSystem.Colors.textPrimary)
+                Text(description)
+                    .font(DesignSystem.Typography.caption)
+                    .foregroundColor(DesignSystem.Colors.textSecondary)
+                    .multilineTextAlignment(.leading)
+            }
+            
+            Spacer()
         }
     }
 }

@@ -87,8 +87,8 @@ struct MenuBarView: View {
                 .font(DesignSystem.Typography.body)
             }
         }
-        .frame(width: 280)
-        .padding(DesignSystem.Spacing.sm)
+        .frame(minWidth: 260, idealWidth: 280, maxWidth: 320)
+        .padding(DesignSystem.Spacing.cardSpacing)
         .background(DesignSystem.Colors.backgroundPrimary)
     }
     

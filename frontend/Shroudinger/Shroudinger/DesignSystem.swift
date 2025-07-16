@@ -74,6 +74,16 @@ struct DesignSystem {
         static let componentPadding = md
         static let sectionSpacing = lg
         static let containerPadding = md
+        
+        // Responsive spacing helpers
+        static func responsive(compact: CGFloat, regular: CGFloat) -> CGFloat {
+            // Simple responsive helper - could be enhanced with actual size class detection
+            return regular
+        }
+        
+        static let cardSpacing = responsive(compact: sm, regular: md)
+        static let sectionMargin = responsive(compact: md, regular: lg)
+        static let layoutPadding = responsive(compact: sm, regular: md)
     }
     
     // MARK: - Corner Radius System
@@ -126,6 +136,13 @@ struct DesignSystem {
         static let smooth = SwiftUI.Animation.easeInOut(duration: 0.25)
         static let gentle = SwiftUI.Animation.easeInOut(duration: 0.35)
         static let spring = SwiftUI.Animation.spring(response: 0.3, dampingFraction: 0.7)
+        static let springBouncy = SwiftUI.Animation.spring(response: 0.4, dampingFraction: 0.6)
+        static let microInteraction = SwiftUI.Animation.easeInOut(duration: 0.1)
+        
+        // Specific animations for different use cases
+        static let cardAppear = SwiftUI.Animation.spring(response: 0.4, dampingFraction: 0.8, blendDuration: 0.1)
+        static let buttonPress = SwiftUI.Animation.easeInOut(duration: 0.08)
+        static let statusChange = SwiftUI.Animation.easeInOut(duration: 0.3)
     }
 }
 
@@ -137,35 +154,56 @@ struct ModernCard<Content: View>: View {
     var background: Color = DesignSystem.Colors.backgroundSecondary
     var cornerRadius: CGFloat = DesignSystem.CornerRadius.card
     var shadow: Shadow = DesignSystem.Shadows.small
+    var isInteractive: Bool = false
+    
+    @State private var isHovered = false
     
     init(
         background: Color = DesignSystem.Colors.backgroundSecondary,
         cornerRadius: CGFloat = DesignSystem.CornerRadius.card,
         shadow: Shadow = DesignSystem.Shadows.small,
+        isInteractive: Bool = false,
         @ViewBuilder content: () -> Content
     ) {
         self.background = background
         self.cornerRadius = cornerRadius
         self.shadow = shadow
+        self.isInteractive = isInteractive
         self.content = content()
     }
     
     var body: some View {
         content
             .padding(DesignSystem.Spacing.componentPadding)
-            .background(background)
-            .cornerRadius(cornerRadius)
+            .background(
+                RoundedRectangle(cornerRadius: cornerRadius)
+                    .fill(background)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: cornerRadius)
+                            .stroke(
+                                isInteractive && isHovered 
+                                ? DesignSystem.Colors.primary.opacity(0.2)
+                                : Color.clear,
+                                lineWidth: 1
+                            )
+                    )
+            )
             .shadow(
                 color: shadow.color,
-                radius: shadow.radius,
+                radius: isInteractive && isHovered ? shadow.radius * 1.5 : shadow.radius,
                 x: shadow.x,
-                y: shadow.y
+                y: isInteractive && isHovered ? shadow.y * 1.5 : shadow.y
             )
+            .scaleEffect(isInteractive && isHovered ? 1.005 : 1.0)
+            .animation(DesignSystem.Animation.microInteraction, value: isHovered)
+            .onHover { if isInteractive { isHovered = $0 } }
     }
 }
 
 // Modern Button Styles
 struct PrimaryButtonStyle: ButtonStyle {
+    @State private var isHovered = false
+    
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
             .font(DesignSystem.Typography.bodyMedium)
@@ -174,18 +212,37 @@ struct PrimaryButtonStyle: ButtonStyle {
             .padding(.vertical, DesignSystem.Spacing.xs)
             .background(
                 RoundedRectangle(cornerRadius: DesignSystem.CornerRadius.button)
-                    .fill(DesignSystem.Colors.primary)
+                    .fill(
+                        LinearGradient(
+                            colors: [
+                                DesignSystem.Colors.primary,
+                                DesignSystem.Colors.primaryDark
+                            ],
+                            startPoint: .top,
+                            endPoint: .bottom
+                        )
+                    )
                     .overlay(
                         RoundedRectangle(cornerRadius: DesignSystem.CornerRadius.button)
-                            .fill(.white.opacity(configuration.isPressed ? 0.2 : 0))
+                            .fill(.white.opacity(configuration.isPressed ? 0.2 : isHovered ? 0.1 : 0))
+                    )
+                    .shadow(
+                        color: DesignSystem.Colors.primary.opacity(0.3),
+                        radius: isHovered ? 6 : 3,
+                        x: 0,
+                        y: isHovered ? 3 : 1
                     )
             )
-            .scaleEffect(configuration.isPressed ? 0.98 : 1.0)
-            .animation(DesignSystem.Animation.quick, value: configuration.isPressed)
+            .scaleEffect(configuration.isPressed ? 0.96 : isHovered ? 1.02 : 1.0)
+            .animation(DesignSystem.Animation.buttonPress, value: configuration.isPressed)
+            .animation(DesignSystem.Animation.microInteraction, value: isHovered)
+            .onHover { isHovered = $0 }
     }
 }
 
 struct SecondaryButtonStyle: ButtonStyle {
+    @State private var isHovered = false
+    
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
             .font(DesignSystem.Typography.bodyMedium)
@@ -194,14 +251,25 @@ struct SecondaryButtonStyle: ButtonStyle {
             .padding(.vertical, DesignSystem.Spacing.xs)
             .background(
                 RoundedRectangle(cornerRadius: DesignSystem.CornerRadius.button)
-                    .stroke(DesignSystem.Colors.primary, lineWidth: 1)
+                    .stroke(
+                        DesignSystem.Colors.primary.opacity(isHovered ? 1.0 : 0.7),
+                        lineWidth: isHovered ? 1.5 : 1
+                    )
                     .background(
                         RoundedRectangle(cornerRadius: DesignSystem.CornerRadius.button)
-                            .fill(configuration.isPressed ? DesignSystem.Colors.primary.opacity(0.1) : Color.clear)
+                            .fill(
+                                configuration.isPressed 
+                                ? DesignSystem.Colors.primary.opacity(0.15)
+                                : isHovered 
+                                ? DesignSystem.Colors.primary.opacity(0.05)
+                                : Color.clear
+                            )
                     )
             )
-            .scaleEffect(configuration.isPressed ? 0.98 : 1.0)
-            .animation(DesignSystem.Animation.quick, value: configuration.isPressed)
+            .scaleEffect(configuration.isPressed ? 0.96 : isHovered ? 1.01 : 1.0)
+            .animation(DesignSystem.Animation.buttonPress, value: configuration.isPressed)
+            .animation(DesignSystem.Animation.microInteraction, value: isHovered)
+            .onHover { isHovered = $0 }
     }
 }
 
@@ -227,20 +295,71 @@ struct StatusIndicator: View {
             case .error: return "Error"
             }
         }
+        
+        var isAnimated: Bool {
+            switch self {
+            case .connecting: return true
+            default: return false
+            }
+        }
     }
     
     let status: Status
+    @State private var isAnimating = false
     
     var body: some View {
         HStack(spacing: DesignSystem.Spacing.xs) {
-            Circle()
-                .fill(status.color)
-                .frame(width: 8, height: 8)
+            if status.isAnimated {
+                Circle()
+                    .fill(status.color)
+                    .frame(width: 8, height: 8)
+                    .scaleEffect(isAnimating ? 1.2 : 0.8)
+                    .animation(
+                        Animation.easeInOut(duration: 0.8).repeatForever(autoreverses: true),
+                        value: isAnimating
+                    )
+                    .onAppear { isAnimating = true }
+                    .onDisappear { isAnimating = false }
+            } else {
+                Circle()
+                    .fill(status.color)
+                    .frame(width: 8, height: 8)
+                    .scaleEffect(1.0)
+                    .animation(DesignSystem.Animation.statusChange, value: status.color)
+            }
             
             Text(status.label)
                 .font(DesignSystem.Typography.captionMedium)
                 .foregroundColor(DesignSystem.Colors.textSecondary)
+                .animation(DesignSystem.Animation.statusChange, value: status.label)
         }
+    }
+}
+
+// Loading Indicator Component
+struct LoadingIndicator: View {
+    let size: CGFloat
+    @State private var isAnimating = false
+    
+    init(size: CGFloat = 20) {
+        self.size = size
+    }
+    
+    var body: some View {
+        Circle()
+            .trim(from: 0, to: 0.7)
+            .stroke(
+                DesignSystem.Colors.primary,
+                style: StrokeStyle(lineWidth: 2, lineCap: .round)
+            )
+            .frame(width: size, height: size)
+            .rotationEffect(.degrees(isAnimating ? 360 : 0))
+            .animation(
+                Animation.linear(duration: 1).repeatForever(autoreverses: false),
+                value: isAnimating
+            )
+            .onAppear { isAnimating = true }
+            .onDisappear { isAnimating = false }
     }
 }
 

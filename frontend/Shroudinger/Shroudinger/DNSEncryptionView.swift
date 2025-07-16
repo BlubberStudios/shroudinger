@@ -66,8 +66,8 @@ struct DNSEncryptionView: View {
                 
                 Spacer()
             }
-            .padding(.horizontal, DesignSystem.Spacing.lg)
-            .padding(.vertical, DesignSystem.Spacing.xl)
+            .padding(.horizontal, DesignSystem.Spacing.sectionMargin)
+            .padding(.vertical, DesignSystem.Spacing.layoutPadding)
         }
         .sheet(isPresented: Binding(
             get: { activeSheet == .customConfiguration },

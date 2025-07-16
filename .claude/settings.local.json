@@ -30,7 +30,8 @@
       "Bash(osascript:*)",
       "Bash(timeout 5 make dev)",
       "Bash(/dev/null)",
-      "Bash(echo:*)"
+      "Bash(echo:*)",
+      "Bash(sips:*)"
     ],
     "deny": []
   }
