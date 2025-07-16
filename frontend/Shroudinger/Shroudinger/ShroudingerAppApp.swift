@@ -23,6 +23,7 @@ struct ShroudingerAppApp: App {
                 .environmentObject(settingsManager)
         } label: {
             Image("MenuBarIcon")
+                .renderingMode(.template)
         }
         .menuBarExtraStyle(.window)
     }
