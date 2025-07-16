@@ -267,6 +267,47 @@ class SettingsManager: ObservableObject {
         blockMalwareEnabled = userDefaults.object(forKey: "blockMalwareEnabled") as? Bool ?? true
     }
     
+    // MARK: - Service Status Testing
+    
+    func checkBackendServicesStatus() async -> Bool {
+        let services = [
+            "http://localhost:8080/health",  // API Server
+            "http://localhost:8082/health",  // DNS Service
+            "http://localhost:8083/health",  // Middleware
+            "http://localhost:8081/health"   // Blocklist Service
+        ]
+        
+        var servicesRunning = 0
+        
+        for serviceURL in services {
+            if await isServiceRunning(serviceURL) {
+                servicesRunning += 1
+            }
+        }
+        
+        // Return true if at least half the services are running
+        return servicesRunning >= 2
+    }
+    
+    private func isServiceRunning(_ urlString: String) async -> Bool {
+        guard let url = URL(string: urlString) else { return false }
+        
+        var request = URLRequest(url: url)
+        request.httpMethod = "GET"
+        request.timeoutInterval = 2.0
+        
+        do {
+            let (_, response) = try await URLSession.shared.data(for: request)
+            if let httpResponse = response as? HTTPURLResponse {
+                return httpResponse.statusCode == 200
+            }
+        } catch {
+            // Service not available
+        }
+        
+        return false
+    }
+    
     private func checkInitialServiceStatus() {
         // Delay the service check to avoid blocking app startup
         Task {
@@ -387,53 +428,126 @@ class SettingsManager: ObservableObject {
         isTestingConnection = true
         
         let config = getCurrentDNSConfig()
-        
-        // Simulate delay to show the testing state
-        try? await Task.sleep(nanoseconds: 1_000_000_000) // 1 second delay
-        
-        // For now, do a simple test using URLSession to test basic connectivity
-        // This will work even if our backend services aren't running
         let startTime = Date()
         
-        do {
-            // Test basic HTTP connectivity to a reliable endpoint
-            let testURL = URL(string: "https://1.1.1.1/")!
-            var request = URLRequest(url: testURL)
-            request.httpMethod = "HEAD"
-            request.timeoutInterval = 5.0
-            
-            let (_, response) = try await URLSession.shared.data(for: request)
-            let responseTime = Date().timeIntervalSince(startTime)
-            
-            if let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 {
-                lastTestResult = DNSTestResult(
-                    success: true,
-                    responseTime: responseTime,
-                    error: nil,
-                    dnsProtocol: selectedProtocol,
-                    server: config.host.isEmpty ? "System DNS" : config.host
-                )
-            } else {
-                lastTestResult = DNSTestResult(
-                    success: false,
-                    responseTime: responseTime,
-                    error: "HTTP test failed",
-                    dnsProtocol: selectedProtocol,
-                    server: config.host.isEmpty ? "System DNS" : config.host
-                )
-            }
-        } catch {
-            let responseTime = Date().timeIntervalSince(startTime)
-            lastTestResult = DNSTestResult(
-                success: false,
-                responseTime: responseTime,
-                error: "Connection test failed: \(error.localizedDescription)",
-                dnsProtocol: selectedProtocol,
-                server: config.host.isEmpty ? "System DNS" : config.host
-            )
+        // First, try to test the backend DNS service if available
+        let backendTestResult = await testBackendDNSService(testDomain: testDomain)
+        
+        if let backendResult = backendTestResult {
+            lastTestResult = backendResult
+        } else {
+            // Backend not available, try a simple connectivity test
+            await performBasicConnectivityTest(config: config, startTime: startTime)
         }
         
         isTestingConnection = false
+    }
+    
+    private func testBackendDNSService(testDomain: String) async -> DNSTestResult? {
+        guard let url = URL(string: "http://localhost:8082/api/v1/dns/test") else {
+            return nil
+        }
+        
+        let config = getCurrentDNSConfig()
+        
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.timeoutInterval = 10.0
+        
+        let testRequest = [
+            "protocol": selectedProtocol.rawValue,
+            "host": config.host,
+            "port": config.port,
+            "url": config.url,
+            "testDomain": testDomain
+        ] as [String: Any]
+        
+        do {
+            request.httpBody = try JSONSerialization.data(withJSONObject: testRequest)
+            
+            let startTime = Date()
+            let (data, response) = try await URLSession.shared.data(for: request)
+            let responseTime = Date().timeIntervalSince(startTime)
+            
+            if let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 {
+                if let jsonResponse = try JSONSerialization.jsonObject(with: data) as? [String: Any] {
+                    let success = jsonResponse["success"] as? Bool ?? false
+                    let error = jsonResponse["error"] as? String
+                    
+                    return DNSTestResult(
+                        success: success,
+                        responseTime: responseTime,
+                        error: error,
+                        dnsProtocol: selectedProtocol,
+                        server: config.host.isEmpty ? "Backend DNS Service" : config.host
+                    )
+                }
+            }
+            
+            return DNSTestResult(
+                success: false,
+                responseTime: responseTime,
+                error: "Backend service responded with error",
+                dnsProtocol: selectedProtocol,
+                server: "Backend DNS Service"
+            )
+            
+        } catch {
+            // Backend service not available
+            return nil
+        }
+    }
+    
+    private func performBasicConnectivityTest(config: DNSServerConfig, startTime: Date) async {
+        // Test multiple endpoints to avoid DNS blocking issues
+        let testEndpoints = [
+            "http://www.google.com",
+            "http://www.apple.com",
+            "http://httpbin.org/status/200"
+        ]
+        
+        var lastError: String = "All connectivity tests failed"
+        
+        for endpoint in testEndpoints {
+            do {
+                guard let testURL = URL(string: endpoint) else { continue }
+                
+                var request = URLRequest(url: testURL)
+                request.httpMethod = "HEAD"
+                request.timeoutInterval = 3.0
+                
+                let (_, response) = try await URLSession.shared.data(for: request)
+                let responseTime = Date().timeIntervalSince(startTime)
+                
+                if let httpResponse = response as? HTTPURLResponse, 
+                   httpResponse.statusCode >= 200 && httpResponse.statusCode < 300 {
+                    
+                    lastTestResult = DNSTestResult(
+                        success: true,
+                        responseTime: responseTime,
+                        error: nil,
+                        dnsProtocol: selectedProtocol,
+                        server: config.host.isEmpty ? "System DNS" : config.host
+                    )
+                    return
+                }
+                
+            } catch {
+                lastError = "Network connectivity test failed: \(error.localizedDescription)"
+                continue
+            }
+        }
+        
+        // All tests failed
+        let responseTime = Date().timeIntervalSince(startTime)
+        lastTestResult = DNSTestResult(
+            success: false,
+            responseTime: responseTime,
+            error: lastError,
+            dnsProtocol: selectedProtocol,
+            server: config.host.isEmpty ? "System DNS" : config.host
+        )
     }
     
     func updateDNSConfiguration() async {
