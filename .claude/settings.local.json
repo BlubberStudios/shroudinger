@@ -12,7 +12,26 @@
       "Bash(make:*)",
       "Bash(swiftc:*)",
       "Bash(go mod:*)",
-      "Bash(find:*)"
+      "Bash(find:*)",
+      "Bash(go build:*)",
+      "Bash(git push:*)",
+      "Bash(curl:*)",
+      "Bash(chmod:*)",
+      "Bash(./docs/testing/test_connection_button.sh:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(pkill:*)",
+      "Bash(git checkout:*)",
+      "Bash(swift:*)",
+      "Bash(open:*)",
+      "Bash(kill:*)",
+      "Bash(git rebase:*)",
+      "Bash(lsof:*)",
+      "Bash(osascript:*)",
+      "Bash(timeout 5 make dev)",
+      "Bash(/dev/null)",
+      "Bash(echo:*)",
+      "Bash(sips:*)"
     ],
     "deny": []
   }

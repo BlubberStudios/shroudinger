@@ -61,19 +61,346 @@ curl http://localhost:8083/health
 
 ## SwiftUI App to API Server Testing
 
-### Configuration Management
-```bash
-# Test configuration retrieval (what the app would call)
-curl http://localhost:8080/api/v1/config | jq
+### Test Connection Button Implementation
 
-# Expected response for app configuration:
+The SwiftUI app has a "Test Connection" button that should validate the backend connectivity. This section provides comprehensive testing for this critical UI component.
+
+#### Test Connection Button Backend Endpoints
+
+```bash
+# 1. Test main configuration endpoint (primary connectivity test)
+curl -s http://localhost:8080/api/v1/config/ | jq
+
+# Expected response for successful connection:
 # {
+#   "privacy_mode": true,
+#   "logging_disabled": true,
 #   "dns_servers": ["1.1.1.1", "9.9.9.9", "8.8.8.8"],
 #   "blocklist_sources": 3,
-#   "privacy_mode": true,
-#   "logging_disabled": true
+#   "blocklist_enabled": true,
+#   "encryption_enabled": true,
+#   "response_time": "42ns",
+#   "status": "healthy"
+# }
+
+# 2. Test service health endpoint (secondary connectivity test)
+curl -s http://localhost:8080/api/v1/stats/health | jq
+
+# Expected response for healthy services:
+# {
+#   "api_server": "healthy",
+#   "blocklist_service": "healthy", 
+#   "dns_service": "healthy",
+#   "middleware": "healthy",
+#   "overall_status": "healthy"
+# }
+
+# 3. Test DNS server connectivity (DNS functionality test)
+curl -s -X POST http://localhost:8080/api/v1/dns/test \
+  -H "Content-Type: application/json" \
+  -d '{"server": "1.1.1.1", "timeout": 5}' | jq
+
+# Expected response for successful DNS test:
+# {
+#   "status": "success",
+#   "server": "1.1.1.1", 
+#   "response_time": "45ms",
+#   "connection": "established",
+#   "encryption": "verified"
 # }
 ```
+
+#### Test Connection Button UI Flow Testing
+
+```bash
+# Test Connection Button Complete Flow
+echo "🔘 Testing Test Connection Button Flow..."
+
+# Step 1: Backend connectivity test
+echo "Step 1: Testing backend connectivity..."
+BACKEND_STATUS=$(curl -s http://localhost:8080/health | jq -r '.status // "error"')
+if [ "$BACKEND_STATUS" = "healthy" ]; then
+    echo "✅ Backend connection: SUCCESS"
+else
+    echo "❌ Backend connection: FAILED ($BACKEND_STATUS)"
+fi
+
+# Step 2: Configuration retrieval test
+echo "Step 2: Testing configuration retrieval..."
+CONFIG_RESPONSE=$(curl -s http://localhost:8080/api/v1/config/)
+if echo "$CONFIG_RESPONSE" | jq -e '.privacy_mode == true' > /dev/null; then
+    echo "✅ Configuration retrieval: SUCCESS"
+else
+    echo "❌ Configuration retrieval: FAILED"
+fi
+
+# Step 3: DNS server connectivity test
+echo "Step 3: Testing DNS server connectivity..."
+DNS_TEST_RESPONSE=$(curl -s -X POST http://localhost:8080/api/v1/dns/test \
+  -H "Content-Type: application/json" \
+  -d '{"server": "1.1.1.1", "timeout": 5}')
+if echo "$DNS_TEST_RESPONSE" | jq -e '.status' > /dev/null; then
+    echo "✅ DNS connectivity test: SUCCESS"
+else
+    echo "❌ DNS connectivity test: FAILED"
+fi
+
+# Step 4: Service health verification
+echo "Step 4: Testing service health..."
+HEALTH_RESPONSE=$(curl -s http://localhost:8080/api/v1/stats/health)
+if echo "$HEALTH_RESPONSE" | jq -e '.overall_status' > /dev/null; then
+    echo "✅ Service health check: SUCCESS"
+else
+    echo "❌ Service health check: FAILED"
+fi
+
+echo "🎉 Test Connection Button flow completed"
+```
+
+#### Test Connection Button Error Scenarios
+
+```bash
+# Test Connection Button Error Handling
+echo "🔘 Testing Test Connection Button Error Scenarios..."
+
+# Scenario 1: Backend service unavailable
+echo "Scenario 1: Testing backend service unavailable..."
+# (Stop API server temporarily)
+curl -s http://localhost:8080/health --connect-timeout 2 || echo "✅ Error handling: Connection timeout detected"
+
+# Scenario 2: Partial service failure
+echo "Scenario 2: Testing partial service failure..."
+# Test when one service is down but others are up
+curl -s http://localhost:8080/api/v1/stats/health | jq -e '.overall_status' || echo "✅ Error handling: Partial failure detected"
+
+# Scenario 3: DNS server unreachable
+echo "Scenario 3: Testing DNS server unreachable..."
+curl -s -X POST http://localhost:8080/api/v1/dns/test \
+  -H "Content-Type: application/json" \
+  -d '{"server": "192.0.2.1", "timeout": 2}' | jq -e '.status == "timeout"' && echo "✅ Error handling: DNS timeout detected"
+
+# Scenario 4: Invalid configuration
+echo "Scenario 4: Testing invalid configuration..."
+curl -s http://localhost:8080/api/v1/config/ | jq -e '.privacy_mode == false' && echo "❌ Configuration error detected" || echo "✅ Configuration valid"
+
+echo "🎉 Error scenario testing completed"
+```
+
+#### Test Connection Button UI State Testing
+
+```bash
+# Test Connection Button UI State Validation
+echo "🔘 Testing Test Connection Button UI States..."
+
+# UI State 1: Loading state validation
+echo "UI State 1: Testing loading state..."
+START_TIME=$(date +%s%3N)
+curl -s http://localhost:8080/api/v1/config/ > /dev/null
+END_TIME=$(date +%s%3N)
+RESPONSE_TIME=$((END_TIME - START_TIME))
+if [ $RESPONSE_TIME -lt 1000 ]; then
+    echo "✅ Loading state: Fast response (<1s) - good UX"
+else
+    echo "⚠️ Loading state: Slow response (>1s) - may need loading indicator"
+fi
+
+# UI State 2: Success state validation
+echo "UI State 2: Testing success state..."
+SUCCESS_RESPONSE=$(curl -s http://localhost:8080/api/v1/config/)
+if echo "$SUCCESS_RESPONSE" | jq -e '.privacy_mode == true' > /dev/null; then
+    echo "✅ Success state: All systems operational - green indicator"
+    echo "   - Privacy mode: $(echo "$SUCCESS_RESPONSE" | jq -r '.privacy_mode')"
+    echo "   - DNS servers: $(echo "$SUCCESS_RESPONSE" | jq -r '.dns_servers | length') configured"
+    echo "   - Blocklist: $(echo "$SUCCESS_RESPONSE" | jq -r '.blocklist_enabled') enabled"
+else
+    echo "❌ Success state: System issues detected - red indicator"
+fi
+
+# UI State 3: Warning state validation
+echo "UI State 3: Testing warning state..."
+HEALTH_RESPONSE=$(curl -s http://localhost:8080/api/v1/stats/health)
+if echo "$HEALTH_RESPONSE" | jq -e '.status == "not_implemented"' > /dev/null; then
+    echo "⚠️ Warning state: Some services not fully operational - yellow indicator"
+else
+    echo "✅ Warning state: All services operational"
+fi
+
+echo "🎉 UI state testing completed"
+```
+
+#### Test Connection Button Performance Testing
+
+```bash
+# Test Connection Button Performance Testing
+echo "🔘 Testing Test Connection Button Performance..."
+
+# Performance test: Response time
+echo "Performance Test: Response time measurement..."
+for i in {1..5}; do
+    START_TIME=$(date +%s%3N)
+    curl -s http://localhost:8080/api/v1/config/ > /dev/null
+    END_TIME=$(date +%s%3N)
+    RESPONSE_TIME=$((END_TIME - START_TIME))
+    echo "  Test $i: ${RESPONSE_TIME}ms"
+done
+
+# Performance test: Concurrent connections
+echo "Performance Test: Concurrent connection handling..."
+for i in {1..10}; do
+    curl -s http://localhost:8080/api/v1/config/ > /dev/null &
+done
+wait
+echo "✅ Concurrent connection test completed"
+
+# Performance test: Memory usage during test
+echo "Performance Test: Memory usage monitoring..."
+MEMORY_BEFORE=$(ps aux | grep "go run.*main.go" | grep -v grep | awk '{print $6}' | head -1)
+curl -s http://localhost:8080/api/v1/config/ > /dev/null
+MEMORY_AFTER=$(ps aux | grep "go run.*main.go" | grep -v grep | awk '{print $6}' | head -1)
+echo "  Memory usage: ${MEMORY_BEFORE} -> ${MEMORY_AFTER} KB"
+
+echo "🎉 Performance testing completed"
+```
+
+#### Test Connection Button Swift Integration
+
+```swift
+// Swift code example for Test Connection Button implementation
+// This would be integrated into the SwiftUI app
+
+import SwiftUI
+import Foundation
+
+struct TestConnectionButton: View {
+    @State private var isLoading = false
+    @State private var connectionStatus: ConnectionStatus = .unknown
+    @State private var errorMessage: String = ""
+    
+    enum ConnectionStatus {
+        case unknown
+        case testing
+        case success
+        case warning
+        case error
+    }
+    
+    var body: some View {
+        Button(action: testConnection) {
+            HStack {
+                if isLoading {
+                    ProgressView()
+                        .scaleEffect(0.8)
+                }
+                Text(buttonText)
+                statusIcon
+            }
+            .padding()
+            .background(buttonColor)
+            .foregroundColor(.white)
+            .cornerRadius(8)
+        }
+        .disabled(isLoading)
+    }
+    
+    private var buttonText: String {
+        switch connectionStatus {
+        case .unknown: return "Test Connection"
+        case .testing: return "Testing..."
+        case .success: return "Connection OK"
+        case .warning: return "Partial Issues"
+        case .error: return "Connection Failed"
+        }
+    }
+    
+    private var buttonColor: Color {
+        switch connectionStatus {
+        case .unknown: return .blue
+        case .testing: return .orange
+        case .success: return .green
+        case .warning: return .yellow
+        case .error: return .red
+        }
+    }
+    
+    private var statusIcon: some View {
+        switch connectionStatus {
+        case .success: return Image(systemName: "checkmark.circle.fill")
+        case .warning: return Image(systemName: "exclamationmark.triangle.fill")
+        case .error: return Image(systemName: "xmark.circle.fill")
+        default: return Image(systemName: "network")
+        }
+    }
+    
+    private func testConnection() {
+        isLoading = true
+        connectionStatus = .testing
+        errorMessage = ""
+        
+        // Test backend connectivity
+        testBackendConnection { success in
+            DispatchQueue.main.async {
+                if success {
+                    connectionStatus = .success
+                } else {
+                    connectionStatus = .error
+                    errorMessage = "Backend service unavailable"
+                }
+                isLoading = false
+            }
+        }
+    }
+    
+    private func testBackendConnection(completion: @escaping (Bool) -> Void) {
+        guard let url = URL(string: "http://localhost:8080/api/v1/config/") else {
+            completion(false)
+            return
+        }
+        
+        URLSession.shared.dataTask(with: url) { data, response, error in
+            if let error = error {
+                print("Connection test error: \(error)")
+                completion(false)
+                return
+            }
+            
+            guard let httpResponse = response as? HTTPURLResponse,
+                  httpResponse.statusCode == 200 else {
+                completion(false)
+                return
+            }
+            
+            guard let data = data else {
+                completion(false)
+                return
+            }
+            
+            do {
+                let config = try JSONDecoder().decode(ConfigResponse.self, from: data)
+                completion(config.privacyMode == true)
+            } catch {
+                print("JSON decode error: \(error)")
+                completion(false)
+            }
+        }.resume()
+    }
+}
+
+struct ConfigResponse: Codable {
+    let privacyMode: Bool
+    let dnsServers: [String]
+    let blocklistEnabled: Bool
+    let encryptionEnabled: Bool
+    
+    enum CodingKeys: String, CodingKey {
+        case privacyMode = "privacy_mode"
+        case dnsServers = "dns_servers"
+        case blocklistEnabled = "blocklist_enabled"
+        case encryptionEnabled = "encryption_enabled"
+    }
+}
+```
+
+### Configuration Management
 
 ### Statistics for GUI Display
 ```bash

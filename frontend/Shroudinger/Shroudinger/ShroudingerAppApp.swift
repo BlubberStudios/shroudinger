@@ -2,24 +2,60 @@ import SwiftUI
 
 @main
 struct ShroudingerAppApp: App {
+    @StateObject private var settingsManager = SettingsManager()
+    
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            ContentView_Safe()
+                .environmentObject(settingsManager)
         }
         .windowResizability(.contentSize)
-        
-        MenuBarExtra("Shroudinger", systemImage: "shield.fill") {
-            Button("Show Main Window") {
-                // Show main window
+        .defaultSize(width: 800, height: 500)
+        .commands {
+            CommandGroup(replacing: .appInfo) {
+                Button("About Shroudinger") {
+                    NSApp.orderFrontStandardAboutPanel(nil)
+                }
             }
-            .keyboardShortcut("m", modifiers: [.command])
             
-            Divider()
-            
-            Button("Quit") {
-                NSApplication.shared.terminate(nil)
+            CommandGroup(after: .appInfo) {
+                Button("Show Main Window") {
+                    NSApp.activate(ignoringOtherApps: true)
+                    for window in NSApp.windows {
+                        if window.isVisible && window.canBecomeKey {
+                            window.makeKeyAndOrderFront(nil)
+                            break
+                        }
+                    }
+                }
+                .keyboardShortcut("m", modifiers: .command)
+                
+                Button("Toggle DNS Protection") {
+                    settingsManager.servicesRunning.toggle()
+                }
+                .keyboardShortcut("p", modifiers: .command)
+                
+                Button("DNS Settings") {
+                    NSApp.activate(ignoringOtherApps: true)
+                    for window in NSApp.windows {
+                        if window.isVisible && window.canBecomeKey {
+                            window.makeKeyAndOrderFront(nil)
+                            break
+                        }
+                    }
+                    print("DNS Settings keyboard shortcut triggered")
+                }
+                .keyboardShortcut("d", modifiers: .command)
             }
-            .keyboardShortcut("q", modifiers: [.command])
         }
+        
+        MenuBarExtra {
+            MenuBarView_Modern()
+                .environmentObject(settingsManager)
+        } label: {
+            Image("MenuBarIcon")
+                .renderingMode(.template)
+        }
+        .menuBarExtraStyle(.window)
     }
 }
