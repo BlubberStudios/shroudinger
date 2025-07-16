@@ -31,7 +31,8 @@
       "Bash(timeout 5 make dev)",
       "Bash(/dev/null)",
       "Bash(echo:*)",
-      "Bash(sips:*)"
+      "Bash(sips:*)",
+      "Bash(git branch:*)"
     ],
     "deny": []
   }

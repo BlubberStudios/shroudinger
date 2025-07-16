@@ -79,20 +79,17 @@ struct ContentView: View {
                         HStack(spacing: DesignSystem.Spacing.sm) {
                             Image(systemName: section.icon)
                                 .font(DesignSystem.Typography.body)
-                                .foregroundColor(selectedSection == section ? DesignSystem.Colors.primary : DesignSystem.Colors.textSecondary)
+                                .foregroundColor(DesignSystem.Colors.textSecondary)
                                 .frame(width: 20)
                             
                             Text(section.rawValue)
                                 .font(DesignSystem.Typography.bodyMedium)
-                                .foregroundColor(selectedSection == section ? DesignSystem.Colors.primary : DesignSystem.Colors.textPrimary)
+                                .foregroundColor(DesignSystem.Colors.textPrimary)
                             
                             Spacer()
                         }
                         .padding(DesignSystem.Spacing.sm)
-                        .background(
-                            RoundedRectangle(cornerRadius: DesignSystem.CornerRadius.small)
-                                .fill(selectedSection == section ? DesignSystem.Colors.primary.opacity(0.1) : Color.clear)
-                        )
+                        .background(Color.clear)
                         .contentShape(Rectangle())
                     }
                     .buttonStyle(.plain)
