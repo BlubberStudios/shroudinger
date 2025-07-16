@@ -7,93 +7,82 @@ struct ContentView: View {
     var body: some View {
         HStack(spacing: 0) {
             // Left Panel - Main Controls
-            VStack(spacing: 16) {
+            VStack(spacing: DesignSystem.Spacing.lg) {
                 // Header with compact status
-                HStack(spacing: 12) {
-                    Image(systemName: "shield.fill")
-                        .font(.system(size: 28, weight: .medium))
-                        .foregroundColor(settingsManager.servicesRunning ? .green : .secondary)
-                    
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("Shroudinger")
-                            .font(.title3)
-                            .fontWeight(.medium)
+                ModernCard {
+                    HStack(spacing: DesignSystem.Spacing.sm) {
+                        Image(systemName: "shield.fill")
+                            .font(.system(size: 28, weight: .medium))
+                            .foregroundColor(settingsManager.servicesRunning ? DesignSystem.Colors.success : DesignSystem.Colors.textSecondary)
                         
-                        HStack(spacing: 6) {
-                            Circle()
-                                .fill(settingsManager.servicesRunning ? .green : .red)
-                                .frame(width: 6, height: 6)
-                            Text(settingsManager.servicesRunning ? "Services Running" : "Services Stopped")
-                                .font(.caption)
-                                .foregroundColor(.secondary)
+                        VStack(alignment: .leading, spacing: DesignSystem.Spacing.xxs) {
+                            Text("Shroudinger")
+                                .font(DesignSystem.Typography.title)
+                                .foregroundColor(DesignSystem.Colors.textPrimary)
+                            
+                            StatusIndicator(status: settingsManager.servicesRunning ? .connected : .disconnected)
                         }
-                    }
-                    
-                    Spacer()
-                    
-                    // Main toggle prominently placed
-                    Toggle("DNS Protection", isOn: $settingsManager.servicesRunning)
-                        .toggleStyle(.switch)
-                        .labelsHidden()
-                        .onChange(of: settingsManager.servicesRunning) { newValue in
-                            Task {
-                                if newValue {
-                                    await settingsManager.startServices()
-                                } else {
-                                    await settingsManager.stopServices()
+                        
+                        Spacer()
+                        
+                        // Main toggle prominently placed
+                        Toggle("DNS Protection", isOn: $settingsManager.servicesRunning)
+                            .toggleStyle(.switch)
+                            .labelsHidden()
+                            .onChange(of: settingsManager.servicesRunning) { newValue in
+                                Task {
+                                    if newValue {
+                                        await settingsManager.startServices()
+                                    } else {
+                                        await settingsManager.stopServices()
+                                    }
                                 }
                             }
-                        }
+                    }
                 }
-                .padding(.horizontal, 16)
-                .padding(.vertical, 12)
-                .background(Color(.controlBackgroundColor))
-                .cornerRadius(8)
                 
                 // Statistics - Horizontal Layout
-                HStack(spacing: 12) {
-                    StatCardView(title: "Blocked", value: blockedValue, color: .red)
-                    StatCardView(title: "Total", value: totalValue, color: .blue)
-                    StatCardView(title: "Rate", value: rateValue, color: .orange)
+                HStack(spacing: DesignSystem.Spacing.sm) {
+                    StatCardView(title: "Blocked", value: blockedValue, color: DesignSystem.Colors.error)
+                    StatCardView(title: "Total", value: totalValue, color: DesignSystem.Colors.info)
+                    StatCardView(title: "Rate", value: rateValue, color: DesignSystem.Colors.warning)
                 }
                 
                 // Privacy Settings - Placeholder
-                VStack(spacing: 8) {
-                    HStack {
-                        Label("Privacy Settings", systemImage: "gear")
-                            .font(.headline)
+                ModernCard {
+                    VStack(spacing: DesignSystem.Spacing.xs) {
+                        HStack {
+                            Label("Privacy Settings", systemImage: "gear")
+                                .font(DesignSystem.Typography.headline)
+                                .foregroundColor(DesignSystem.Colors.textPrimary)
+                            Spacer()
+                        }
+                        
+                        // Empty space where toggles were
                         Spacer()
+                            .frame(height: 80)
                     }
-                    
-                    // Empty space where toggles were
-                    Spacer()
-                        .frame(height: 80)
                 }
-                .padding(12)
-                .background(Color(.controlBackgroundColor))
-                .cornerRadius(8)
                 
                 Spacer()
                 
                 // Action buttons
-                VStack(spacing: 8) {
+                VStack(spacing: DesignSystem.Spacing.xs) {
                     Button(showAdvancedSettings ? "Hide Advanced Settings" : "Advanced Settings") {
-                        withAnimation(.easeInOut(duration: 0.3)) {
+                        withAnimation(DesignSystem.Animation.smooth) {
                             showAdvancedSettings.toggle()
                         }
                     }
-                    .buttonStyle(.bordered)
-                    .controlSize(.regular)
+                    .buttonStyle(SecondaryButtonStyle())
                     
                     Button("Activity Logs") {
                         // Show logs
                     }
-                    .buttonStyle(.bordered)
-                    .controlSize(.regular)
+                    .buttonStyle(SecondaryButtonStyle())
                 }
             }
             .frame(width: 280)
-            .padding(16)
+            .padding(DesignSystem.Spacing.md)
             
             if showAdvancedSettings {
                 Divider()
@@ -101,20 +90,20 @@ struct ContentView: View {
                 // Right Panel - DNS Configuration
                 VStack(spacing: 0) {
                     // DNS Configuration Header
-                    HStack {
-                        Label("DNS Configuration", systemImage: "network")
-                            .font(.headline)
-                        Spacer()
+                    ModernCard(cornerRadius: 0) {
+                        HStack {
+                            Label("DNS Configuration", systemImage: "network")
+                                .font(DesignSystem.Typography.headline)
+                                .foregroundColor(DesignSystem.Colors.textPrimary)
+                            Spacer()
+                        }
                     }
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 12)
-                    .background(Color(.controlBackgroundColor))
                     
                     Divider()
                     
                     ScrollView {
                         DNSEncryptionView()
-                            .padding(16)
+                            .padding(DesignSystem.Spacing.md)
                     }
                 }
                 .frame(minWidth: 350)
@@ -122,7 +111,7 @@ struct ContentView: View {
             }
         }
         .frame(minWidth: showAdvancedSettings ? 680 : 300, maxWidth: showAdvancedSettings ? 1200 : 320, minHeight: 480, maxHeight: .infinity)
-        .background(Color(.windowBackgroundColor))
+        .background(DesignSystem.Colors.backgroundPrimary)
     }
     
     private func calculateBlockRate() -> Int {
@@ -152,19 +141,17 @@ struct StatCardView: View {
     let color: Color
     
     var body: some View {
-        VStack(spacing: 4) {
-            Text(safeValue)
-                .font(.title3)
-                .fontWeight(.semibold)
-                .foregroundColor(color)
-            Text(safeTitle)
-                .font(.caption2)
-                .foregroundColor(.secondary)
+        ModernCard(shadow: DesignSystem.Shadows.subtle) {
+            VStack(spacing: DesignSystem.Spacing.xxs) {
+                Text(safeValue)
+                    .font(DesignSystem.Typography.titleLarge)
+                    .foregroundColor(color)
+                Text(safeTitle)
+                    .font(DesignSystem.Typography.caption)
+                    .foregroundColor(DesignSystem.Colors.textSecondary)
+            }
+            .frame(maxWidth: .infinity)
         }
-        .frame(maxWidth: .infinity)
-        .padding(.vertical, 8)
-        .background(Color(.controlBackgroundColor))
-        .cornerRadius(6)
     }
     
     private var safeValue: String {
