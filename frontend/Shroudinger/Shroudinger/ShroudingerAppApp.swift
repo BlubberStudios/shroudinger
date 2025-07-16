@@ -18,9 +18,11 @@ struct ShroudingerAppApp: App {
             }
         }
         
-        MenuBarExtra("Shroudinger", image: "MenuBarIcon") {
+        MenuBarExtra {
             MenuBarView()
                 .environmentObject(settingsManager)
+        } label: {
+            Image("MenuBarIcon")
         }
         .menuBarExtraStyle(.window)
     }
