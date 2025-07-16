@@ -9,6 +9,7 @@ struct ContentView: View {
         case overview = "Overview"
         case dnsSettings = "DNS Settings"
         case logs = "Activity Logs"
+        case testingLogs = "Testing Logs"
         
         var id: String { rawValue }
         
@@ -17,6 +18,16 @@ struct ContentView: View {
             case .overview: return "shield.fill"
             case .dnsSettings: return "network"
             case .logs: return "list.bullet.rectangle"
+            case .testingLogs: return "wrench.and.screwdriver"
+            }
+        }
+        
+        // Dynamic cases based on testing logs setting
+        static func availableCases(showTesting: Bool) -> [SidebarSection] {
+            if showTesting {
+                return [.overview, .dnsSettings, .logs, .testingLogs]
+            } else {
+                return [.overview, .dnsSettings, .logs]
             }
         }
     }
@@ -74,9 +85,17 @@ struct ContentView: View {
                 }
             }
             
+            // Debug info (remove in production)
+            if settingsManager.testingLogsEnabled {
+                Text("🧪 Testing Mode: ON")
+                    .font(.caption)
+                    .foregroundColor(.orange)
+                    .padding(.bottom, 4)
+            }
+            
             // Navigation List
             VStack(spacing: DesignSystem.Spacing.xs) {
-                ForEach(SidebarSection.allCases) { section in
+                ForEach(SidebarSection.availableCases(showTesting: settingsManager.testingLogsEnabled)) { section in
                     Button(action: {
                         selectedSection = section
                     }) {
@@ -91,9 +110,16 @@ struct ContentView: View {
                                 .foregroundColor(DesignSystem.Colors.textPrimary)
                             
                             Spacer()
+                            
+                            // Debug indicator for testing logs
+                            if section == .testingLogs {
+                                Circle()
+                                    .fill(Color.orange)
+                                    .frame(width: 6, height: 6)
+                            }
                         }
                         .padding(DesignSystem.Spacing.sm)
-                        .background(Color.clear)
+                        .background(selectedSection == section ? DesignSystem.Colors.primary.opacity(0.1) : Color.clear)
                         .contentShape(Rectangle())
                     }
                     .buttonStyle(.plain)
@@ -136,6 +162,8 @@ struct ContentView: View {
                 DNSEncryptionView()
             case .logs:
                 activityLogsView
+            case .testingLogs:
+                TestingLogsView()
             case .none:
                 overviewView
             }
@@ -193,6 +221,73 @@ struct ContentView: View {
                     }
                 }
                 
+                // Development Tools (moved up for better visibility) - REBUILD TEST
+                ModernCard {
+                    VStack(spacing: DesignSystem.Spacing.md) {
+                        HStack {
+                            Label("Development Tools", systemImage: "wrench.and.screwdriver")
+                                .font(DesignSystem.Typography.headline)
+                                .foregroundColor(DesignSystem.Colors.textPrimary)
+                            Spacer()
+                        }
+                        
+                        VStack(spacing: DesignSystem.Spacing.sm) {
+                            // Testing Logs Toggle
+                            HStack {
+                                Image(systemName: "list.bullet.rectangle")
+                                    .font(DesignSystem.Typography.body)
+                                    .foregroundColor(DesignSystem.Colors.primary)
+                                    .frame(width: 20)
+                                
+                                VStack(alignment: .leading, spacing: DesignSystem.Spacing.xxs) {
+                                    Text("Testing Logs")
+                                        .font(DesignSystem.Typography.bodyMedium)
+                                        .foregroundColor(DesignSystem.Colors.textPrimary)
+                                    Text("Show middleware activity logs (testing only)")
+                                        .font(DesignSystem.Typography.caption)
+                                        .foregroundColor(DesignSystem.Colors.textSecondary)
+                                }
+                                
+                                Spacer()
+                                
+                                Toggle("", isOn: $settingsManager.testingLogsEnabled)
+                                    .toggleStyle(.switch)
+                                    .onChange(of: settingsManager.testingLogsEnabled) { newValue in
+                                        print("🧪 Testing logs enabled changed to: \(newValue)")
+                                        settingsManager.saveSettings()
+                                    }
+                            }
+                            
+                            // Testing Logs Visibility Toggle (if enabled)
+                            if settingsManager.testingLogsEnabled {
+                                HStack {
+                                    Image(systemName: "eye")
+                                        .font(DesignSystem.Typography.body)
+                                        .foregroundColor(DesignSystem.Colors.primary)
+                                        .frame(width: 20)
+                                    
+                                    VStack(alignment: .leading, spacing: DesignSystem.Spacing.xxs) {
+                                        Text("Show in Overview")
+                                            .font(DesignSystem.Typography.bodyMedium)
+                                            .foregroundColor(DesignSystem.Colors.textPrimary)
+                                        Text("Display recent logs in main view")
+                                            .font(DesignSystem.Typography.caption)
+                                            .foregroundColor(DesignSystem.Colors.textSecondary)
+                                    }
+                                    
+                                    Spacer()
+                                    
+                                    Toggle("", isOn: $settingsManager.testingLogsVisible)
+                                        .toggleStyle(.switch)
+                                        .onChange(of: settingsManager.testingLogsVisible) { _ in
+                                            settingsManager.saveSettings()
+                                        }
+                                }
+                            }
+                        }
+                    }
+                }
+                
                 // Privacy Information
                 ModernCard {
                     VStack(spacing: DesignSystem.Spacing.md) {
@@ -211,10 +306,40 @@ struct ContentView: View {
                         }
                     }
                 }
+                
+                
+                // Testing Logs Preview (if enabled and visible)
+                if settingsManager.testingLogsEnabled && settingsManager.testingLogsVisible {
+                    testingLogsPreview
+                }
             }
         }
         .padding(DesignSystem.Spacing.sectionMargin)
         .navigationTitle("Overview")
+    }
+    
+    private var testingLogsPreview: some View {
+        ModernCard {
+            VStack(spacing: DesignSystem.Spacing.md) {
+                HStack {
+                    Label("Recent Middleware Activity", systemImage: "list.bullet.rectangle")
+                        .font(DesignSystem.Typography.headline)
+                        .foregroundColor(DesignSystem.Colors.textPrimary)
+                    
+                    Spacer()
+                    
+                    Button("View All") {
+                        selectedSection = .testingLogs
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .controlSize(.small)
+                }
+                
+                // Compact logs view
+                CompactTestingLogsView()
+                    .frame(maxHeight: 200)
+            }
+        }
     }
     
     private var activityLogsView: some View {

@@ -52,21 +52,13 @@ dev-setup:
 # Start development services
 dev:
 	@echo "🚀 Starting development services..."
-	@echo "Starting backend services in background..."
-	cd backend && go run ./cmd/api-server &
-	cd backend && go run ./cmd/blocklist-service &
-	cd backend && go run ./cmd/dns-service &
-	@echo "Starting middleware..."
-	cd middleware && go run ./cmd/middleware &
+	@./scripts/start-services.sh
 	@echo "✅ Development services started!"
 
 # Stop development services
 dev-stop:
 	@echo "🛑 Stopping development services..."
-	pkill -f "go run.*api-server" || true
-	pkill -f "go run.*blocklist-service" || true
-	pkill -f "go run.*dns-service" || true
-	pkill -f "go run.*middleware" || true
+	@./scripts/stop-services.sh
 	@echo "✅ Development services stopped!"
 
 # Run linting

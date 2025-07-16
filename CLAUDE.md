@@ -25,7 +25,7 @@ Shroudinger is a privacy-first macOS DNS blocklist and encryption application th
 - `make lint` - Run linters (golangci-lint for Go)
 
 ### Individual Component Commands
-- **Swift Frontend**: `cd frontend && xcodebuild -project ShroudingerApp.xcodeproj -scheme ShroudingerApp`
+- **Swift Frontend**: `cd frontend && xcodebuild -project Shroudinger.xcodeproj -scheme Shroudinger`
 - **Go Backend**: `cd backend && go run ./cmd/api-server` (or blocklist-service, dns-service)
 - **Go Middleware**: `cd middleware && go run ./cmd/middleware`
 - **Go Tests**: `cd backend && go test -v ./...` or `cd middleware && go test -v ./...`
@@ -36,13 +36,17 @@ Shroudinger is a privacy-first macOS DNS blocklist and encryption application th
 ```
 shroudinger/
 ├── frontend/           # Swift macOS Application
-│   ├── ShroudingerApp/    # Main GUI app (SwiftUI)
-│   ├── ShroudingerExtension/ # NetworkExtension (NEDNSProxyProvider)
-│   └── Shared/            # Shared Swift components
+│   └── Shroudinger/       # Xcode project
+│       ├── Shroudinger/   # Main GUI app (SwiftUI)
+│       ├── ShroudingerExtension/ # NetworkExtension (NEDNSProxyProvider)
+│       ├── ShroudingerTests/ # Unit tests
+│       └── ShroudingerUITests/ # UI tests
 ├── backend/            # Go Backend Services
 │   ├── cmd/               # Service entry points (api-server, blocklist-service, dns-service)
 │   └── internal/models/   # Data models (blocklist.go, dns.go)
 ├── middleware/         # Go Middleware (App-Extension coordination)
+├── Blocklist/          # Blocklist management (Swift)
+├── docs/               # Documentation and architecture
 └── scripts/            # Build and development scripts
 ```
 
@@ -61,10 +65,11 @@ The application follows a multi-process architecture with clear separation of co
 
 ### Technology Stack
 - **Swift 5.9+**: SwiftUI for GUI, NetworkExtension for system DNS interception, async/await structured concurrency
-- **Go**: Backend services using Gin framework
+- **Go 1.21+**: Backend services using Gin framework v1.9.1
 - **Data Structures**: Trie (prefix tree), Bloom filters, Hash tables for microsecond domain lookups
 - **DNS Protocols**: DoT (DNS over TLS), DoH (DNS over HTTPS), DoQ (DNS over QUIC)
 - **Frameworks**: MenuBarExtra, AppKit, Combine, Network.framework, CryptoKit
+- **Build System**: Make-based build system with comprehensive targets
 
 ## Privacy-First Design
 
@@ -113,11 +118,14 @@ Based on detailed performance analysis in the documentation:
 
 ## Key Files
 
-- `Makefile`: Complete build and development workflow
+- `Makefile`: Complete build and development workflow with all targets
 - `backend/cmd/api-server/main.go`: Main API server with privacy-first design
 - `backend/internal/models/blocklist.go`: Blocklist data structures and privacy models
-- `frontend/ShroudingerExtension/DNSProxy/DNSProxyProvider.swift`: NetworkExtension implementation
+- `frontend/Shroudinger/ShroudingerExtension/DNSProxyProvider.swift`: NetworkExtension implementation
+- `frontend/Shroudinger/Shroudinger/ShroudingerAppApp.swift`: Main app entry point
+- `Blocklist/BlocklistManager.swift`: Blocklist management logic
 - `docs/development/CLAUDE.md`: Additional project documentation and architecture details
+- `scripts/privacy-audit.sh`: Privacy compliance audit script
 
 ## Development Timeline
 

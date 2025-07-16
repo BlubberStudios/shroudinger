@@ -27,6 +27,10 @@ class SettingsManager: ObservableObject {
     @Published var totalCount: Int = 0
     @Published var lastStatsUpdate: Date = Date()
     
+    // Testing and Development
+    @Published var testingLogsEnabled: Bool = false
+    @Published var testingLogsVisible: Bool = false
+    
     // Service Status
     @Published var apiServiceStatus: ServiceStatus = .stopped
     @Published var dnsServiceStatus: ServiceStatus = .stopped
@@ -265,6 +269,8 @@ class SettingsManager: ObservableObject {
         blockAdsEnabled = userDefaults.object(forKey: "blockAdsEnabled") as? Bool ?? true
         blockTrackersEnabled = userDefaults.object(forKey: "blockTrackersEnabled") as? Bool ?? true
         blockMalwareEnabled = userDefaults.object(forKey: "blockMalwareEnabled") as? Bool ?? true
+        testingLogsEnabled = userDefaults.object(forKey: "testingLogsEnabled") as? Bool ?? false
+        testingLogsVisible = userDefaults.object(forKey: "testingLogsVisible") as? Bool ?? false
     }
     
     // MARK: - Service Status Testing
@@ -335,6 +341,8 @@ class SettingsManager: ObservableObject {
         enableLogging = userDefaults.bool(forKey: "enableLogging")
         autoUpdateBlocklists = userDefaults.bool(forKey: "autoUpdateBlocklists")
         updateInterval = userDefaults.double(forKey: "updateInterval")
+        testingLogsEnabled = userDefaults.bool(forKey: "testingLogsEnabled")
+        testingLogsVisible = userDefaults.bool(forKey: "testingLogsVisible")
         
         if let providerRaw = userDefaults.string(forKey: "selectedDNSProvider"),
            let provider = DNSProvider(rawValue: providerRaw) {
@@ -385,6 +393,8 @@ class SettingsManager: ObservableObject {
         userDefaults.set(enableLogging, forKey: "enableLogging")
         userDefaults.set(autoUpdateBlocklists, forKey: "autoUpdateBlocklists")
         userDefaults.set(updateInterval, forKey: "updateInterval")
+        userDefaults.set(testingLogsEnabled, forKey: "testingLogsEnabled")
+        userDefaults.set(testingLogsVisible, forKey: "testingLogsVisible")
         
         saveCustomDNSConfig()
     }
@@ -634,24 +644,32 @@ class SettingsManager: ObservableObject {
         }
         
         // Services not running, start them
-        servicesRunning = true
+        print("🚀 Starting services...")
         apiServiceStatus = .starting
         dnsServiceStatus = .starting
         middlewareServiceStatus = .starting
         blocklistServiceStatus = .starting
         
-        // Start backend services using make dev
-        let result = await executeCommand("make", args: ["dev"])
+        // Start backend services using the dedicated script
+        let projectRoot = getProjectRoot()
+        let scriptPath = projectRoot + "/scripts/start-services.sh"
+        let environment = getTestingEnvironment()
+        
+        print("🔍 Project root: \(projectRoot)")
+        print("🔍 Script path: \(scriptPath)")
+        print("🔍 Environment: \(environment)")
+        
+        let result = await executeCommand("bash", args: [scriptPath], workingDirectory: projectRoot, environment: environment)
+        
+        print("📋 Script result - success: \(result.success), error: \(result.error ?? "none")")
         
         if result.success {
             // Give services time to start
-            try? await Task.sleep(nanoseconds: 2_000_000_000) // 2 seconds
+            print("⏳ Waiting for services to start...")
+            try? await Task.sleep(nanoseconds: 3_000_000_000) // 3 seconds
             
             // Check service health
             await checkServiceHealth()
-            
-            // Start stats monitoring
-            startStatsMonitoring()
             
             // Verify services actually started
             let servicesStarted = apiServiceStatus == .running && 
@@ -659,15 +677,27 @@ class SettingsManager: ObservableObject {
                                  middlewareServiceStatus == .running && 
                                  blocklistServiceStatus == .running
             
-            if !servicesStarted {
+            if servicesStarted {
+                print("✅ All services started successfully")
+                servicesRunning = true
+                startStatsMonitoring()
+            } else {
+                print("❌ Some services failed to start")
+                print("📊 Service statuses:")
+                print("  - API: \(apiServiceStatus.displayName)")
+                print("  - DNS: \(dnsServiceStatus.displayName)")
+                print("  - Middleware: \(middlewareServiceStatus.displayName)")
+                print("  - Blocklist: \(blocklistServiceStatus.displayName)")
                 servicesRunning = false
             }
         } else {
+            print("❌ Script execution failed: \(result.error ?? "Unknown error")")
             servicesRunning = false
-            apiServiceStatus = .error(result.error ?? "Failed to start")
-            dnsServiceStatus = .error(result.error ?? "Failed to start")
-            middlewareServiceStatus = .error(result.error ?? "Failed to start")
-            blocklistServiceStatus = .error(result.error ?? "Failed to start")
+            let errorMessage = result.error ?? "Script execution failed"
+            apiServiceStatus = .error(errorMessage)
+            dnsServiceStatus = .error(errorMessage)
+            middlewareServiceStatus = .error(errorMessage)
+            blocklistServiceStatus = .error(errorMessage)
         }
     }
     
@@ -678,8 +708,9 @@ class SettingsManager: ObservableObject {
         middlewareServiceStatus = .stopped
         blocklistServiceStatus = .stopped
         
-        // Stop backend services using make dev-stop
-        let _ = await executeCommand("make", args: ["dev-stop"])
+        // Stop backend services using the dedicated script
+        let scriptPath = getProjectRoot() + "/scripts/stop-services.sh"
+        let _ = await executeCommand("bash", args: [scriptPath], workingDirectory: getProjectRoot())
         
         // Stop stats monitoring
         stopStatsMonitoring()
@@ -719,11 +750,25 @@ class SettingsManager: ObservableObject {
         }
     }
     
-    private func executeCommand(_ command: String, args: [String]) async -> (success: Bool, error: String?) {
+    private func executeCommand(_ command: String, args: [String], workingDirectory: String? = nil, environment: [String: String]? = nil) async -> (success: Bool, error: String?) {
         return await withCheckedContinuation { continuation in
             let process = Process()
             process.executableURL = URL(fileURLWithPath: "/usr/bin/env")
             process.arguments = [command] + args
+            
+            // Set working directory if provided
+            if let workingDir = workingDirectory {
+                process.currentDirectoryURL = URL(fileURLWithPath: workingDir)
+            }
+            
+            // Set environment variables
+            var processEnvironment = ProcessInfo.processInfo.environment
+            if let env = environment {
+                for (key, value) in env {
+                    processEnvironment[key] = value
+                }
+            }
+            process.environment = processEnvironment
             
             let pipe = Pipe()
             process.standardOutput = pipe
@@ -745,6 +790,81 @@ class SettingsManager: ObservableObject {
                 continuation.resume(returning: (false, error.localizedDescription))
             }
         }
+    }
+    
+    private func getProjectRoot() -> String {
+        // For sandboxed apps, we need to use a location the app can access
+        // We'll use the Application Support directory where we've copied the scripts
+        let supportDir = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
+        let appSupportPath = supportDir.appendingPathComponent("Shroudinger").path
+        
+        // Check if our scripts are available in the app support directory
+        let scriptPath = appSupportPath + "/scripts/start-services.sh"
+        if FileManager.default.fileExists(atPath: scriptPath) {
+            print("✅ Found scripts at: \(appSupportPath)")
+            return appSupportPath
+        }
+        
+        // If not found, try to copy them from the project directory
+        let projectPath = "/Users/rexliu/shroudinger"
+        let makefilePath = projectPath + "/Makefile"
+        
+        if FileManager.default.fileExists(atPath: makefilePath) {
+            print("✅ Found project at: \(projectPath)")
+            
+            // Try to copy scripts to app support if they don't exist
+            do {
+                try FileManager.default.createDirectory(at: supportDir.appendingPathComponent("Shroudinger"), withIntermediateDirectories: true)
+                let sourceScriptsPath = projectPath + "/scripts"
+                let destScriptsPath = appSupportPath + "/scripts"
+                
+                if FileManager.default.fileExists(atPath: sourceScriptsPath) {
+                    try FileManager.default.copyItem(atPath: sourceScriptsPath, toPath: destScriptsPath)
+                    print("✅ Copied scripts to app support directory")
+                    return appSupportPath
+                }
+            } catch {
+                print("⚠️  Could not copy scripts to app support: \(error)")
+            }
+            
+            return projectPath
+        }
+        
+        // If not found, try to find it relative to the current directory
+        let currentDir = FileManager.default.currentDirectoryPath
+        var searchPath = currentDir
+        
+        print("🔍 Searching from current directory: \(currentDir)")
+        
+        // Look for Makefile in current directory or parent directories
+        for _ in 0..<10 {
+            let makefilePath = (searchPath as NSString).appendingPathComponent("Makefile")
+            print("🔍 Checking: \(makefilePath)")
+            if FileManager.default.fileExists(atPath: makefilePath) {
+                print("✅ Found project at: \(searchPath)")
+                return searchPath
+            }
+            
+            let parentPath = (searchPath as NSString).deletingLastPathComponent
+            if parentPath == searchPath {
+                break // Reached root
+            }
+            searchPath = parentPath
+        }
+        
+        // Final fallback - use the app support directory
+        print("⚠️  Using app support directory: \(appSupportPath)")
+        return appSupportPath
+    }
+    
+    private func getTestingEnvironment() -> [String: String] {
+        var env: [String: String] = [:]
+        
+        if testingLogsEnabled {
+            env["SHROUDINGER_TESTING"] = "true"
+        }
+        
+        return env
     }
     
     // MARK: - Statistics Monitoring

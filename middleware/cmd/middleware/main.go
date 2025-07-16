@@ -5,10 +5,12 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"log"
 	"net/http"
 	"os"
 	"os/signal"
+	"sync"
 	"syscall"
 	"time"
 
@@ -19,6 +21,8 @@ const (
 	// Service configuration - middleware coordinates NetworkExtension
 	defaultPort = "8083"
 	serviceName = "middleware"
+	// Testing configuration
+	maxLogEntries = 100
 )
 
 func main() {
@@ -28,6 +32,9 @@ func main() {
 	// Privacy-first middleware
 	r.Use(privacyMiddleware())
 	r.Use(corsMiddleware())
+	if testingMode {
+		r.Use(loggingMiddleware())
+	}
 
 	// Health check endpoint
 	r.GET("/health", healthCheck)
@@ -50,6 +57,19 @@ func main() {
 
 	// Performance monitoring
 	r.GET("/metrics", handleMetrics)
+	
+	// Testing-only logging endpoints (disabled in production)
+	if testingMode {
+		testing := r.Group("/testing")
+		{
+			testing.GET("/logs", handleGetLogs)
+			testing.DELETE("/logs", handleClearLogs)
+			testing.GET("/logs/stream", handleLogsStream)
+		}
+		log.Println("🧪 Testing mode enabled - logging endpoints available")
+	} else {
+		log.Println("🔒 Production mode - logging endpoints disabled")
+	}
 
 	// Configure server
 	port := os.Getenv("PORT")
@@ -67,7 +87,9 @@ func main() {
 		log.Printf("🚀 Middleware Service starting on port %s", port)
 		log.Printf("🔒 Privacy mode: No DNS query logging")
 		log.Printf("🔗 NetworkExtension coordination enabled")
+		addLogEntry("INFO", "middleware", "service_started", 0, 0, nil)
 		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			addLogEntry("ERROR", "middleware", "service_failed", 0, 0, err)
 			log.Fatalf("❌ Server failed to start: %v", err)
 		}
 	}()
@@ -117,11 +139,40 @@ func privacyMiddleware() gin.HandlerFunc {
 		c.Header("X-Data-Persistence", "none")
 		c.Header("X-Data-Sharing", "none")
 		
+		// Testing mode indicator
+		if testingMode {
+			c.Header("X-Testing-Mode", "true")
+			c.Header("X-Testing-Logging", "non-sensitive-only")
+		}
+		
 		// Remove identifying headers for privacy
 		c.Header("Server", "Shroudinger-DNS-Privacy")
 		c.Header("X-Powered-By", "")
 		
 		c.Next()
+	}
+}
+
+// Testing-only logging middleware (privacy-safe)
+func loggingMiddleware() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		if !testingMode {
+			c.Next()
+			return
+		}
+		
+		start := time.Now()
+		path := c.Request.URL.Path
+		method := c.Request.Method
+		
+		c.Next()
+		
+		latency := time.Since(start)
+		status := c.Writer.Status()
+		
+		// Log only non-sensitive request information
+		event := method + " " + path
+		addLogEntry("INFO", "middleware", event, status, latency, nil)
 	}
 }
 
@@ -162,12 +213,16 @@ func handleDNSQuery(c *gin.Context) {
 	}
 
 	if err := c.ShouldBindJSON(&request); err != nil {
+		addLogEntry("ERROR", "dns", "query_invalid_request", 400, 0, err)
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request"})
 		return
 	}
 
 	// PRIVACY CRITICAL: Process DNS query without logging the domain
 	// The domain is handled in-memory only and never persisted anywhere
+	
+	// Log query processing (NO DOMAIN LOGGED)
+	addLogEntry("INFO", "dns", "query_processed", 0, 0, nil)
 	
 	// Simulate DNS processing (in production, this would call backend services)
 	response := gin.H{
@@ -222,10 +277,12 @@ func handleExtensionRegister(c *gin.Context) {
 	}
 
 	if err := c.ShouldBindJSON(&request); err != nil {
+		addLogEntry("ERROR", "extension", "register_invalid_request", 400, 0, err)
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request"})
 		return
 	}
 
+	addLogEntry("INFO", "extension", "extension_registered", 200, 0, nil)
 	c.JSON(http.StatusOK, gin.H{
 		"status":       "registered",
 		"extension_id": request.ExtensionID,
@@ -277,4 +334,128 @@ func handleMetrics(c *gin.Context) {
 	})
 }
 
-var startTime = time.Now()
+// Testing-only logging endpoints
+func handleGetLogs(c *gin.Context) {
+	if !testingMode {
+		c.JSON(http.StatusForbidden, gin.H{"error": "Logging disabled in production"})
+		return
+	}
+	
+	logs := getLogEntries()
+	c.JSON(http.StatusOK, gin.H{
+		"logs":  logs,
+		"count": len(logs),
+		"max_entries": maxLogEntries,
+		"testing_mode": testingMode,
+	})
+}
+
+func handleClearLogs(c *gin.Context) {
+	if !testingMode {
+		c.JSON(http.StatusForbidden, gin.H{"error": "Logging disabled in production"})
+		return
+	}
+	
+	clearLogEntries()
+	addLogEntry("INFO", "middleware", "logs_cleared", 200, 0, nil)
+	c.JSON(http.StatusOK, gin.H{"message": "Logs cleared successfully"})
+}
+
+func handleLogsStream(c *gin.Context) {
+	if !testingMode {
+		c.JSON(http.StatusForbidden, gin.H{"error": "Logging disabled in production"})
+		return
+	}
+	
+	// Set headers for Server-Sent Events
+	c.Header("Content-Type", "text/event-stream")
+	c.Header("Cache-Control", "no-cache")
+	c.Header("Connection", "keep-alive")
+	c.Header("Access-Control-Allow-Origin", "*")
+	
+	// Send initial logs
+	logs := getLogEntries()
+	for _, log := range logs {
+		data, _ := json.Marshal(log)
+		c.Writer.Write([]byte("data: " + string(data) + "\n\n"))
+		c.Writer.Flush()
+	}
+	
+	// Keep connection alive (simplified for demo)
+	c.Writer.Write([]byte("data: {\"type\":\"stream_started\"}\n\n"))
+	c.Writer.Flush()
+}
+
+var (
+	startTime = time.Now()
+	// Testing-only logging (disabled in production)
+	testingMode = os.Getenv("SHROUDINGER_TESTING") == "true"
+	logBuffer   = make([]LogEntry, 0, maxLogEntries)
+	logMutex    sync.RWMutex
+	// WebSocket connections for real-time logging
+	logSubscribers = make(map[*http.ResponseWriter]bool)
+	subscriberMutex sync.RWMutex
+)
+
+// LogEntry represents a testing log entry (no sensitive data)
+type LogEntry struct {
+	Timestamp    time.Time `json:"timestamp"`
+	Level        string    `json:"level"`
+	Service      string    `json:"service"`
+	Event        string    `json:"event"`
+	StatusCode   int       `json:"status_code,omitempty"`
+	ResponseTime string    `json:"response_time,omitempty"`
+	Error        string    `json:"error,omitempty"`
+}
+
+// addLogEntry adds a testing log entry (privacy-safe)
+func addLogEntry(level, service, event string, statusCode int, responseTime time.Duration, err error) {
+	if !testingMode {
+		return
+	}
+	
+	logMutex.Lock()
+	defer logMutex.Unlock()
+	
+	entry := LogEntry{
+		Timestamp:  time.Now(),
+		Level:      level,
+		Service:    service,
+		Event:      event,
+		StatusCode: statusCode,
+	}
+	
+	if responseTime > 0 {
+		entry.ResponseTime = responseTime.String()
+	}
+	
+	if err != nil {
+		entry.Error = err.Error()
+	}
+	
+	// Maintain circular buffer
+	if len(logBuffer) >= maxLogEntries {
+		logBuffer = logBuffer[1:]
+	}
+	
+	logBuffer = append(logBuffer, entry)
+}
+
+// getLogEntries returns testing log entries
+func getLogEntries() []LogEntry {
+	logMutex.RLock()
+	defer logMutex.RUnlock()
+	
+	// Return a copy to prevent race conditions
+	result := make([]LogEntry, len(logBuffer))
+	copy(result, logBuffer)
+	return result
+}
+
+// clearLogEntries clears all testing log entries
+func clearLogEntries() {
+	logMutex.Lock()
+	defer logMutex.Unlock()
+	
+	logBuffer = logBuffer[:0]
+}

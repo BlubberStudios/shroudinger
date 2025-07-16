@@ -32,7 +32,9 @@
       "Bash(/dev/null)",
       "Bash(echo:*)",
       "Bash(sips:*)",
-      "Bash(git branch:*)"
+      "Bash(git branch:*)",
+      "Bash(grep:*)",
+      "Bash(ls:*)"
     ],
     "deny": []
   }
