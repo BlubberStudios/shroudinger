@@ -22,15 +22,17 @@ struct ContentView: View {
     }
     
     var body: some View {
-        NavigationSplitView {
+        HStack(spacing: 0) {
             // Sidebar
             sidebarView
-        } detail: {
+            
+            Divider()
+            
             // Detail View
             detailView
         }
-        .navigationSplitViewStyle(.automatic)
         .background(DesignSystem.Colors.backgroundPrimary)
+        .tint(Color.clear)
     }
     
     private var sidebarView: some View {
@@ -75,7 +77,9 @@ struct ContentView: View {
             // Navigation List
             VStack(spacing: DesignSystem.Spacing.xs) {
                 ForEach(SidebarSection.allCases) { section in
-                    NavigationLink(value: section) {
+                    Button(action: {
+                        selectedSection = section
+                    }) {
                         HStack(spacing: DesignSystem.Spacing.sm) {
                             Image(systemName: section.icon)
                                 .font(DesignSystem.Typography.body)
@@ -93,6 +97,7 @@ struct ContentView: View {
                         .contentShape(Rectangle())
                     }
                     .buttonStyle(.plain)
+                    .accentColor(Color.clear)
                 }
             }
             
@@ -117,12 +122,6 @@ struct ContentView: View {
                     }
                 }
             }
-        }
-        .navigationDestination(for: SidebarSection.self) { section in
-            EmptyView()
-                .onAppear {
-                    selectedSection = section
-                }
         }
         .padding(DesignSystem.Spacing.layoutPadding)
         .frame(minWidth: 280, idealWidth: 320, maxWidth: 400)
@@ -709,7 +708,14 @@ struct CompactDNSServerView: View {
                             .font(.caption)
                     }
                 }
-                .disabled(settingsManager.isTestingConnection || settingsManager.getCurrentDNSConfig().host.isEmpty)
+                .disabled(settingsManager.isTestingConnection || {
+                    let config = settingsManager.getCurrentDNSConfig()
+                    if settingsManager.selectedProtocol == .doH {
+                        return config.url.isEmpty
+                    } else {
+                        return config.host.isEmpty
+                    }
+                }())
                 .buttonStyle(.borderedProminent)
                 .controlSize(.small)
                 
