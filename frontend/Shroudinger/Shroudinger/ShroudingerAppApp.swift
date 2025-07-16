@@ -46,6 +46,13 @@ struct ShroudingerAppApp: App {
                     print("DNS Settings keyboard shortcut triggered")
                 }
                 .keyboardShortcut("d", modifiers: .command)
+                
+                Button("Test DNS Connection") {
+                    Task {
+                        await settingsManager.testDNSConnection()
+                    }
+                }
+                .keyboardShortcut("t", modifiers: .command)
             }
         }
         

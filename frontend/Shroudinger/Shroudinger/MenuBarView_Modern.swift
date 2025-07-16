@@ -154,8 +154,9 @@ struct MenuBarView_Modern: View {
     
     private var testConnectionItem: some View {
         Button(action: {
-            // Simple test action - we'll just show a mock result for now
-            print("Testing DNS connection...")
+            Task {
+                await settingsManager.testDNSConnection()
+            }
         }) {
             HStack(spacing: 12) {
                 Image(systemName: "network.badge.shield.half.filled")
@@ -169,20 +170,35 @@ struct MenuBarView_Modern: View {
                 
                 Spacer()
                 
-                // Simplified for now - just show a static status
-                HStack(spacing: 4) {
-                    Image(systemName: "checkmark.circle.fill")
-                        .foregroundColor(.green)
-                        .font(.caption)
-                    
-                    Text("12ms")
-                        .font(.caption2)
+                if settingsManager.isTestingConnection {
+                    ProgressView()
+                        .scaleEffect(0.8)
+                        .progressViewStyle(CircularProgressViewStyle())
+                } else if let result = settingsManager.lastTestResult {
+                    HStack(spacing: 4) {
+                        Image(systemName: result.success ? "checkmark.circle.fill" : "xmark.circle.fill")
+                            .foregroundColor(result.success ? .green : .red)
+                            .font(.caption)
+                        
+                        if result.success {
+                            Text("\(Int(result.responseTime * 1000))ms")
+                                .font(.caption2)
+                                .foregroundColor(.secondary)
+                        } else {
+                            Text("Failed")
+                                .font(.caption2)
+                                .foregroundColor(.red)
+                        }
+                    }
+                } else {
+                    Text("⌘T")
+                        .font(.system(size: 12))
                         .foregroundColor(.secondary)
                 }
             }
         }
         .buttonStyle(MenuItemButtonStyle())
-        .disabled(false)
+        .disabled(settingsManager.isTestingConnection)
     }
     
     private var showMainWindowItem: some View {
